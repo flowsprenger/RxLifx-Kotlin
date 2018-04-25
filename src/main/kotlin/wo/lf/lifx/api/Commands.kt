@@ -27,54 +27,96 @@ import wo.lf.lifx.extensions.targetTo
 import java.util.concurrent.TimeUnit
 
 object BroadcastGetServiceCommand {
-    fun create(lightSource: LightService): Completable{
+    fun create(lightSource: LightService): Completable {
         return lightSource.broadcast(GetService())
     }
 }
 
-object  LightGetCommand {
+object LightGetCommand {
     fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
         return light.send(LightGet(), ackRequired, responseRequired)
     }
 }
 
+object DeviceGetGroupCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(GetGroup(), ackRequired, responseRequired)
+    }
+}
+
+object DeviceGetLocationCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(GetLocation(), ackRequired, responseRequired)
+    }
+}
+
+object DeviceGetHostFirmwareCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(GetHostFirmware(), ackRequired, responseRequired)
+    }
+}
+
+object DeviceGetWifiFirmwareCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(GetWifiFirmware(), ackRequired, responseRequired)
+    }
+}
+
+object DeviceGetVersionCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(GetVersion(), ackRequired, responseRequired)
+    }
+}
+
+object LightGetInfraredCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = true): Maybe<LightState> {
+        return light.send(GetInfrared(), ackRequired, responseRequired)
+    }
+}
+
+object MultiZoneGetColorZonesCommand {
+    fun create(light: Light, startIndex: Int = 0, endIndex: Int = 255, ackRequired: Boolean = false, responseRequired: Boolean = true): Maybe<LightState> {
+        return light.send(GetColorZones(startIndex.toByte(), endIndex.toByte()), ackRequired, responseRequired)
+    }
+}
+
 fun LightService.broadcast(payload: LifxMessagePayload): Completable {
     return Completable.create {
-        if(send(payload.broadcastTo(sourceId))) {
+        if (send(payload.broadcastTo(sourceId))) {
             it.onComplete()
-        }else{
+        } else {
             it.onError(TransportNotConnectedException())
         }
     }
 }
 
-inline fun <reified R> Light.send(payload: LifxMessagePayload, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<R>{
+inline fun <reified R> Light.send(payload: LifxMessagePayload, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<R> {
     return Maybe.create<R> { emitter ->
-        if(ackRequired || responseRequired) {
+        if (ackRequired || responseRequired) {
             var awaitingAck = ackRequired
             var awaitingResponse = responseRequired
             var response: R? = null
             val sequence = getNextSequence()
             source.send(payload.targetTo(source.sourceId, id, address, sequence))
-            source.messages.filter{ it.message.header.target == id && it.message.header.source == source.sourceId && it.message.header.sequence == sequence }.timeout(2L, TimeUnit.SECONDS).subscribe({
-                if(awaitingAck && it.message.header.type == MessageType.Acknowledgement.value){
+            source.messages.filter { it.message.header.target == id && it.message.header.source == source.sourceId && it.message.header.sequence == sequence }.timeout(2L, TimeUnit.SECONDS).subscribe({
+                if (awaitingAck && it.message.header.type == MessageType.Acknowledgement.value) {
                     awaitingAck = false
                 }
 
-                if(awaitingResponse && it.message.payload is R){
+                if (awaitingResponse && it.message.payload is R) {
                     response = it.message.payload
                     awaitingResponse = false
                 }
 
-                if(!awaitingResponse && !awaitingAck){
-                    if(awaitingResponse){
+                if (!awaitingResponse && !awaitingAck) {
+                    if (awaitingResponse) {
                         emitter.onSuccess(response!!)
-                    }else{
+                    } else {
                         emitter.onComplete()
                     }
                 }
             }, { emitter.onError(it) })
-        }else{
+        } else {
             source.send(payload.targetTo(source.sourceId, id, address))
             emitter.onComplete()
         }
