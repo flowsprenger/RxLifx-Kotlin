@@ -21,6 +21,7 @@ package wo.lf.lifx.net
 
 import io.reactivex.BackpressureStrategy
 import io.reactivex.Flowable
+import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.PublishSubject
 import wo.lf.lifx.domain.Lifx
 import java.io.IOException
@@ -62,7 +63,7 @@ class UdpTransport<T>(val port: Int, private val parser: LifxMessageParser<T>) :
         buffer.order(ByteOrder.LITTLE_ENDIAN)
         val datagram = DatagramPacket(buffer.array(), 1024)
 
-        val disposable = publisher.subscribe {
+        val disposable = publisher.observeOn(Schedulers.io()).subscribe {
             try {
                 val buffer = parser.serialise(it.message)
                 channel.send(DatagramPacket(buffer.array(), buffer.position(), it.target, Lifx.defaultPort))

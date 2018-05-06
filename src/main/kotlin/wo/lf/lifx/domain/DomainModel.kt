@@ -43,7 +43,7 @@ class Header : LifxMessageSerializable {
         buffer.putShort(protocolOriginTagged)
         buffer.putInt(source)
         buffer.putLong(target)
-        assert(reserved.size == 0); reserved.forEach { buffer.put(it) }
+        assert(reserved.size == 6); reserved.forEach { buffer.put(it) }
         buffer.put(flags)
         buffer.put(sequence)
         buffer.putLong(reserved1)
@@ -1141,7 +1141,7 @@ class SetLocation : LifxMessagePayload {
     var updated_at: Long
 
     override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
-        assert(location.size == 0); location.forEach { buffer.put(it) }
+        assert(location.size == 16); location.forEach { buffer.put(it) }
         (0 until 32).forEach { buffer.put(label[it]) }
         buffer.putLong(updated_at)
         return buffer
@@ -1200,7 +1200,7 @@ class StateLocation : LifxMessagePayload {
     var updated_at: Long
 
     override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
-        assert(location.size == 0); location.forEach { buffer.put(it) }
+        assert(location.size == 16); location.forEach { buffer.put(it) }
         (0 until 32).forEach { buffer.put(label[it]) }
         buffer.putLong(updated_at)
         return buffer
@@ -1296,7 +1296,7 @@ class SetGroup : LifxMessagePayload {
     var updated_at: Long
 
     override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
-        assert(group.size == 0); group.forEach { buffer.put(it) }
+        assert(group.size == 16); group.forEach { buffer.put(it) }
         (0 until 32).forEach { buffer.put(label[it]) }
         buffer.putLong(updated_at)
         return buffer
@@ -1355,7 +1355,7 @@ class StateGroup : LifxMessagePayload {
     var updated_at: Long
 
     override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
-        assert(group.size == 0); group.forEach { buffer.put(it) }
+        assert(group.size == 16); group.forEach { buffer.put(it) }
         (0 until 32).forEach { buffer.put(label[it]) }
         buffer.putLong(updated_at)
         return buffer
@@ -1412,7 +1412,7 @@ class EchoRequest : LifxMessagePayload {
     var payload: Array<Byte>
 
     override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
-        assert(payload.size == 0); payload.forEach { buffer.put(it) }
+        assert(payload.size == 64); payload.forEach { buffer.put(it) }
         return buffer
     }
 
@@ -1457,7 +1457,7 @@ class EchoResponse : LifxMessagePayload {
     var payload: Array<Byte>
 
     override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
-        assert(payload.size == 0); payload.forEach { buffer.put(it) }
+        assert(payload.size == 64); payload.forEach { buffer.put(it) }
         return buffer
     }
 
@@ -2380,7 +2380,7 @@ class StateMultiZone : LifxMessagePayload {
     override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
         buffer.put(count)
         buffer.put(index)
-        assert(color.size == 0); color.forEach { it.addToByteBuffer(buffer) }
+        assert(color.size == 8); color.forEach { it.addToByteBuffer(buffer) }
         return buffer
     }
 

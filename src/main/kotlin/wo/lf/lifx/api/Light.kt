@@ -22,12 +22,11 @@ package wo.lf.lifx.api
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
 import io.reactivex.flowables.GroupedFlowable
+import wo.lf.lifx.api.Light.Companion.CLIENT_CHANGE_TIMEOUT
 import wo.lf.lifx.domain.*
-import wo.lf.lifx.domain.Lifx.defaultColor
 import wo.lf.lifx.extensions.capture
 import wo.lf.lifx.extensions.fireAndForget
 import wo.lf.lifx.net.SourcedLifxMessage
-import java.lang.Math.min
 import java.net.InetAddress
 import java.util.*
 
@@ -41,7 +40,8 @@ enum class LightProperty {
     HostFirmware,
     WifiFirmware,
     ProductInfo,
-    InfraredBrightness
+    InfraredBrightness,
+    Zones
 }
 
 data class FirmwareVersion(val build: Long, val version: Int) {
@@ -81,7 +81,9 @@ data class ProductInfo(val vendorId: Int, val productId: Int, val version: Int) 
         }
 }
 
-class Light(val id: Long, val source: ILightSource<LifxMessage<LifxMessagePayload>>, changeDispatcher: ILightChangeDispatcher) {
+class Light(val id: Long, val source: ILightSource<LifxMessage<LifxMessagePayload>>, changeDispatcher: ILightChangeDispatcher, private val messageHandler: ILightMessageHandler = LightMessageHandler) {
+
+    internal val updatedAtByProperty = mutableMapOf<LightProperty, Long>()
 
     lateinit var address: InetAddress
 
@@ -94,48 +96,7 @@ class Light(val id: Long, val source: ILightSource<LifxMessage<LifxMessagePayloa
 
             updateReachability()
 
-            val payload = message.message.payload
-            when (payload) {
-                is LightState -> {
-                    label = String(payload.label).trimNullbytes()
-                    color = payload.color
-                    power = PowerState.fromValue(payload.power)
-                }
-                is StateGroup -> {
-                    group = payload
-                }
-                is StateLocation -> {
-                    location = payload
-                }
-                is StateHostFirmware -> {
-                    hostFirmware = FirmwareVersion.fromHostFirmwareVersion(payload)
-                }
-                is StateWifiFirmware -> {
-                    wifiFirmware = FirmwareVersion.fromWifiFirmwareVersion(payload)
-                }
-                is StateVersion -> {
-                    productInfo = ProductInfo.fromStateVersion(payload)
-                }
-                is StateInfrared -> {
-                    infraredBrightness = payload.brightness
-                }
-                is StateMultiZone -> {
-                    val count = payload.count.toInt()
-                    val index = payload.index.toInt()
-                    val firstAfter = min(index + 8, count)
-                    if(zones.count != count || zones.colors.subList(index, firstAfter) != payload.color.toList().subList(0, min(8, count - index))){
-                        zones = Zones(count = count, colors = List(index,
-                                { zones.colors.getOrNull(it) ?: defaultColor })
-                                .plus(payload.color.map { it }.subList(0, Math.min(8, count - index))
-                                .plus(List(count - firstAfter, { zones.colors.getOrNull(firstAfter + it) ?: defaultColor })))
-                        )
-                    }
-                }
-                is StateService -> {
-                    // NOOP
-                }
-                else -> println("${message.message.payload}")
-            }
+            messageHandler.handleMessage(this, message.message.payload)
         }.capture(disposables)
 
         source.tick.subscribe {
@@ -182,43 +143,57 @@ class Light(val id: Long, val source: ILightSource<LifxMessage<LifxMessagePayloa
         private set
 
     var label: String by LightChangeNotifier(LightProperty.Label, "", changeDispatcher)
-        private set
+        internal set
     var color: HSBK by LightChangeNotifier(LightProperty.Color, Lifx.defaultColor, changeDispatcher)
-        private set
+        internal set
     var power: PowerState by LightChangeNotifier(LightProperty.Power, PowerState.OFF, changeDispatcher)
-        private set
+        internal set
 
     var group: StateGroup by LightChangeNotifier(LightProperty.Group, defaultGroup, changeDispatcher)
-        private set
+        internal set
     var location: StateLocation by LightChangeNotifier(LightProperty.Location, defaultLocation, changeDispatcher)
-        private set
+        internal set
 
     var hostFirmware: FirmwareVersion by LightChangeNotifier(LightProperty.HostFirmware, FirmwareVersion.default, changeDispatcher)
-        private set
+        internal set
     var wifiFirmware: FirmwareVersion by LightChangeNotifier(LightProperty.WifiFirmware, FirmwareVersion.default, changeDispatcher)
-        private set
+        internal set
 
     var productInfo: ProductInfo by LightChangeNotifier(LightProperty.ProductInfo, ProductInfo.default, changeDispatcher)
-        private set
+        internal set
 
     var infraredBrightness: Short by LightChangeNotifier(LightProperty.InfraredBrightness, 0, changeDispatcher)
-        private set
+        internal set
 
-    var zones: Zones by LightChangeNotifier(LightProperty.InfraredBrightness, Zones(count = 0, colors = listOf()), changeDispatcher)
-        private set
+    var zones: Zones by LightChangeNotifier(LightProperty.Zones, Zones(count = 0, colors = listOf()), changeDispatcher)
+        internal set
 
     private var sequence: Byte = 0
     fun getNextSequence(): Byte = sequence.inc()
 
     companion object {
         const val REACHABILITY_TIMEOUT = 11_000L
+        const val CLIENT_CHANGE_TIMEOUT = 2_000L
 
         val defaultGroup = StateGroup(Array(8, { 48.toByte() }), byteArrayOf(), 0L)
         val defaultLocation = StateLocation(Array(8, { 48.toByte() }), byteArrayOf(), 0L)
     }
 }
 
-private fun String.trimNullbytes(): String {
+enum class LightChangeSource {
+    Client,
+    Device,
+}
+
+internal inline fun Light.update(source: LightChangeSource, property: LightProperty, apply: () -> Unit) {
+    val now = Date().time
+    if (source == LightChangeSource.Client || updatedAtByProperty.getOrDefault(property, 0) + CLIENT_CHANGE_TIMEOUT > now) {
+        updatedAtByProperty[property] = now
+        apply()
+    }
+}
+
+internal fun String.trimNullbytes(): String {
     return substring(0, this.indexOf('\u0000'))
 }
 

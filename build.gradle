@@ -1,18 +1,25 @@
-version '1.0-SNAPSHOT'
-
 buildscript {
     ext.kotlin_version = '1.2.30'
 
     repositories {
         mavenCentral()
+        jcenter()
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
+plugins {
+    id "com.jfrog.bintray" version "1.7.3"
+}
+
+version '0.0.1'
+
 apply plugin: 'java'
 apply plugin: 'kotlin'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
 
 sourceCompatibility = 1.7
 
@@ -24,4 +31,49 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     testCompile group: 'junit', name: 'junit', version: '4.12'
     compile "io.reactivex.rxjava2:rxjava:2.1.8"
+}
+
+jar {
+    manifest {
+        attributes('Implementation-Title': project.name,
+                'Implementation-Version': project.version)
+    }
+}
+
+task sourceJar(type: Jar) {
+    classifier 'sources'
+    from sourceSets.main.allSource
+}
+
+bintray {
+    user = "$System.env.BINTRAY_USER"
+    key = "$System.env.BINTRAY_KEY"
+
+    pkg {
+        repo = 'RxLifx-Kotlin'
+        name = 'RxLifx-Kotlin'
+        userOrg = 'flowsprenger'
+        licenses = ['MIT']
+        vcsUrl = 'https://github.com/flowsprenger/RxLifx-Kotlin'
+        version {
+            name = '0.0.1'
+            desc = 'RxLifx-Kotlin'
+            released  = new Date()
+            vcsTag = '0.0.1'
+            attributes = ['gradle-plugin': 'com.use.less:com.use.less.gradle:gradle-useless-plugin']
+        }
+    }
+    publications = ['MyPublication']
+}
+
+publishing {
+    publications {
+        MyPublication(MavenPublication) {
+            from components.java
+            artifact tasks.sourceJar
+            groupId 'wo.lf'
+            artifactId 'rx-lifx'
+            version '0.0.1'
+        }
+    }
 }

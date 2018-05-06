@@ -57,8 +57,10 @@ class LightService(transportFactory: TransportFactory, private val changeDispatc
 
     fun start(){
         disposables.add(messages.groupBy { it.message.header.target }.subscribe{ lightMessages ->
-            val light = Light(lightMessages.key!!, this@LightService, changeDispatcher).apply { disposables.add(attach(lightMessages)) }
-            changeDispatcher.onLightAdded(light)
+            Light(lightMessages.key!!, this@LightService, changeDispatcher).apply {
+                changeDispatcher.onLightAdded(this)
+                disposables.add(attach(lightMessages))
+            }
         })
 
         disposables.add(tick.subscribe {
