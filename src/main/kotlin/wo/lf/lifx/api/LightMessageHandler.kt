@@ -52,6 +52,22 @@ object LightMessageHandler: ILightMessageHandler {
                         infraredBrightness = payload.brightness
                     }
                 }
+                is StateZone -> {
+                    update(LightChangeSource.Device, LightProperty.Zones) {
+                        val count = payload.count.toInt()
+                        val index = payload.index.toInt()
+                        val firstAfter = index + 1
+                        if (zones.count != count || zones.colors[index] != payload.color) {
+                            zones = Zones(count = count, colors = List(index,
+                                    { zones.colors.getOrNull(it) ?: Lifx.defaultColor })
+                                            .plus(listOf(payload.color)
+                                            .plus(List(count - firstAfter, {
+                                                zones.colors.getOrNull(firstAfter + it) ?: Lifx.defaultColor
+                                            })))
+                            )
+                        }
+                    }
+                }
                 is StateMultiZone -> {
                     update(LightChangeSource.Device, LightProperty.Zones) {
                         val count = payload.count.toInt()
@@ -71,7 +87,10 @@ object LightMessageHandler: ILightMessageHandler {
                 is StateService -> {
                     // NOOP
                 }
-                else -> println("${payload}")
+                is SetPower, is LightSetWaveformOptional, is LightSetWaveform, is LightSetPower, is LightSetColor, is SetGroup, is SetLocation, is SetLabel, is SetInfrared, is SetColorZones -> {
+
+                }
+                else -> println("cannot recognize payload: $payload")
             }
         }
     }

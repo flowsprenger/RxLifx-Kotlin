@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.2.30'
+    ext.kotlin_version = '1.2.41'
 
     repositories {
         mavenCentral()
@@ -14,7 +14,7 @@ plugins {
     id "com.jfrog.bintray" version "1.7.3"
 }
 
-version '0.0.1'
+version "0.0.1.7"
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
@@ -56,10 +56,10 @@ bintray {
         licenses = ['MIT']
         vcsUrl = 'https://github.com/flowsprenger/RxLifx-Kotlin'
         version {
-            name = '0.0.1'
+            name = "$version"
             desc = 'RxLifx-Kotlin'
             released  = new Date()
-            vcsTag = '0.0.1'
+            vcsTag = "$version"
             attributes = ['gradle-plugin': 'com.use.less:com.use.less.gradle:gradle-useless-plugin']
         }
     }
@@ -73,7 +73,7 @@ publishing {
             artifact tasks.sourceJar
             groupId 'wo.lf'
             artifactId 'rx-lifx'
-            version '0.0.1'
+            version "$version"
         }
     }
 }

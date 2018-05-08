@@ -24,6 +24,7 @@ import io.reactivex.disposables.Disposable
 import io.reactivex.flowables.GroupedFlowable
 import wo.lf.lifx.api.Light.Companion.CLIENT_CHANGE_TIMEOUT
 import wo.lf.lifx.domain.*
+import wo.lf.lifx.extensions.broadcastAddress
 import wo.lf.lifx.extensions.capture
 import wo.lf.lifx.extensions.fireAndForget
 import wo.lf.lifx.net.SourcedLifxMessage
@@ -85,7 +86,8 @@ class Light(val id: Long, val source: ILightSource<LifxMessage<LifxMessagePayloa
 
     internal val updatedAtByProperty = mutableMapOf<LightProperty, Long>()
 
-    lateinit var address: InetAddress
+    var address: InetAddress = broadcastAddress
+        internal set
 
     fun attach(messages: GroupedFlowable<Long, SourcedLifxMessage<LifxMessage<LifxMessagePayload>>>): Disposable {
         val disposables = CompositeDisposable()
@@ -113,10 +115,10 @@ class Light(val id: Long, val source: ILightSource<LifxMessage<LifxMessagePayloa
 
     private fun pollState() {
         LightGetCommand.create(this).fireAndForget()
-        if (productInfo.hasInfraredSupport) {
+        if (productInfo.hasMultiZoneSupport) {
             MultiZoneGetColorZonesCommand.create(this).fireAndForget()
         }
-        if (productInfo.hasMultiZoneSupport) {
+        if (productInfo.hasInfraredSupport) {
             LightGetInfraredCommand.create(this).fireAndForget()
         }
     }
@@ -187,7 +189,7 @@ enum class LightChangeSource {
 
 internal inline fun Light.update(source: LightChangeSource, property: LightProperty, apply: () -> Unit) {
     val now = Date().time
-    if (source == LightChangeSource.Client || updatedAtByProperty.getOrDefault(property, 0) + CLIENT_CHANGE_TIMEOUT > now) {
+    if (source == LightChangeSource.Client || updatedAtByProperty.getOrDefault(property, 0) + CLIENT_CHANGE_TIMEOUT < now) {
         updatedAtByProperty[property] = now
         apply()
     }
