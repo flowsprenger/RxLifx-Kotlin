@@ -48,25 +48,36 @@ interface TransportFactory {
     fun <T> create(port: Int, parser: LifxMessageParser<T>): Transport<T>
 }
 
-class UdpTransport<T>(val port: Int, private val parser: LifxMessageParser<T>) : Transport<T> {
+interface DatagramSocketFactory {
+    fun create(): DatagramSocket
+}
+
+object DefaultDatagramSocketFactory : DatagramSocketFactory {
+    override fun create(): DatagramSocket = DatagramSocket(null)
+}
+
+class UdpTransport<T>(val port: Int, private val parser: LifxMessageParser<T>, private val datagramSocketFactory: DatagramSocketFactory = DefaultDatagramSocketFactory) : Transport<T> {
 
     private val publisher = PublishSubject.create<TargetedLifxMessage<T>>()
 
     private var isConnected = false
 
     override val messages: Flowable<SourcedLifxMessage<T>> = Flowable.create({ emitter ->
-        val channel = DatagramSocket(null)
-        channel.reuseAddress = true
-        channel.bind(InetSocketAddress(port))
-        val buffer = ByteBuffer.allocate(1024)
-        buffer.clear()
-        buffer.order(ByteOrder.LITTLE_ENDIAN)
+        val channel = datagramSocketFactory.create().apply {
+            reuseAddress = true
+            bind(InetSocketAddress(this@UdpTransport.port))
+        }
+        val buffer = ByteBuffer.allocate(1024).apply {
+            clear()
+            order(ByteOrder.LITTLE_ENDIAN)
+        }
         val datagram = DatagramPacket(buffer.array(), 1024)
 
         val disposable = publisher.observeOn(Schedulers.io()).subscribe {
             try {
-                val buffer = parser.serialise(it.message)
-                channel.send(DatagramPacket(buffer.array(), buffer.position(), it.target, Lifx.defaultPort))
+                with(parser.serialise(it.message)) {
+                    channel.send(DatagramPacket(array(), position(), it.target, Lifx.defaultPort))
+                }
             } catch (e: NotYetConnectedException) {
                 channel.disconnect()
             }
@@ -80,7 +91,6 @@ class UdpTransport<T>(val port: Int, private val parser: LifxMessageParser<T>) :
                 buffer.mark()
                 channel.receive(datagram)
                 var length = datagram.length
-                //buffer.reset()
                 while (length >= 36) {
                     buffer.mark()
                     val size = buffer.getShort(buffer.position()).toInt()
@@ -114,10 +124,10 @@ class UdpTransport<T>(val port: Int, private val parser: LifxMessageParser<T>) :
     }, BackpressureStrategy.BUFFER)
 
     override fun send(message: TargetedLifxMessage<T>): Boolean {
-        return if(isConnected) {
+        return if (isConnected) {
             publisher.onNext(message)
             true
-        }else{
+        } else {
             false
         }
     }
@@ -126,7 +136,6 @@ class UdpTransport<T>(val port: Int, private val parser: LifxMessageParser<T>) :
         override fun <T> create(port: Int, parser: LifxMessageParser<T>): Transport<T> {
             return UdpTransport(port, parser)
         }
-
     }
 }
 
