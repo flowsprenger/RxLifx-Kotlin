@@ -81,18 +81,18 @@ object MultiZoneGetColorZonesCommand {
 }
 
 object LightSetColorCommand {
-   fun create(light: Light, color: HSBK, duration: Int, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
-       return light.send(LightSetColor(0.toByte(), color, duration), ackRequired, responseRequired){
-           light.update(LightChangeSource.Client, LightProperty.Color) {
-               light.color = color
-           }
-       }
+    fun create(light: Light, color: HSBK, duration: Int, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(LightSetColor(0.toByte(), color, duration), ackRequired, responseRequired) {
+            light.update(LightChangeSource.Client, LightProperty.Color) {
+                light.color = color
+            }
+        }
     }
 }
 
 object LightSetInfraredCommand {
     fun create(light: Light, brightness: Short, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateInfrared> {
-        return light.send(SetInfrared(brightness), ackRequired, responseRequired){
+        return light.send(SetInfrared(brightness), ackRequired, responseRequired) {
             light.update(LightChangeSource.Client, LightProperty.InfraredBrightness) {
                 light.infraredBrightness = brightness
             }
@@ -103,7 +103,7 @@ object LightSetInfraredCommand {
 object LightSetPowerCommand {
     fun create(light: Light, status: Boolean, duration: Int, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightStatePower> {
         val power: Short = if (status) 0xffff.toShort() else 0
-        return light.send(LightSetPower(level = power, duration = duration), ackRequired, responseRequired){
+        return light.send(LightSetPower(level = power, duration = duration), ackRequired, responseRequired) {
             light.update(LightChangeSource.Client, LightProperty.Power) {
                 light.power = PowerState.fromValue(power)
             }
@@ -124,14 +124,13 @@ object LightSetWaveformOptionalCommand {
 }
 
 
-
 object DeviceSetGroupCommand {
     fun create(light: Light, group: Array<Byte>, label: String, updatedAt: Long, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateGroup> {
         return create(light, group, label.maxLengthPadNull(32).toByteArray(), updatedAt, ackRequired, responseRequired)
     }
 
     fun create(light: Light, group: Array<Byte>, label: ByteArray, updatedAt: Long, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateGroup> {
-        return light.send(SetGroup(group, label, updatedAt), ackRequired, responseRequired){
+        return light.send(SetGroup(group, label, updatedAt), ackRequired, responseRequired) {
             light.update(LightChangeSource.Client, LightProperty.Group) {
                 light.group = StateGroup(group, label, updatedAt)
             }
@@ -145,7 +144,7 @@ object DeviceSetLocationCommand {
     }
 
     fun create(light: Light, location: Array<Byte>, label: ByteArray, updatedAt: Long, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateLocation> {
-        return light.send(SetLocation(location, label, updatedAt), ackRequired, responseRequired){
+        return light.send(SetLocation(location, label, updatedAt), ackRequired, responseRequired) {
             light.update(LightChangeSource.Client, LightProperty.Location) {
                 light.location = StateLocation(location, label, updatedAt)
             }
@@ -156,7 +155,7 @@ object DeviceSetLocationCommand {
 object DeviceSetLabelCommand {
     fun create(light: Light, label: String, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateGroup> {
         val sanitizedLabel = label.maxLengthPadNull(32)
-        return light.send(SetLabel(sanitizedLabel.toByteArray()), ackRequired, responseRequired){
+        return light.send(SetLabel(sanitizedLabel.toByteArray()), ackRequired, responseRequired) {
             light.update(LightChangeSource.Client, LightProperty.Label) {
                 light.label = sanitizedLabel.trimNullbytes()
             }
@@ -165,7 +164,7 @@ object DeviceSetLabelCommand {
 }
 
 fun Boolean.toByte(): Byte {
-    if(this){
+    if (this) {
         return 1
     }
     return 0
@@ -192,7 +191,7 @@ inline fun <reified R> Light.send(payload: LifxMessagePayload, ackRequired: Bool
             var awaitingResponse = responseRequired
             var response: R? = null
             val sequence = getNextSequence()
-            if(source.send(payload.targetTo(source.sourceId, id, address, sequence))) {
+            if (source.send(payload.targetTo(source.sourceId, id, address, sequence))) {
                 sideEffect?.invoke()
                 source.messages.filter { it.message.header.target == id && it.message.header.source == source.sourceId && it.message.header.sequence == sequence }.timeout(2L, TimeUnit.SECONDS).subscribe({
                     if (awaitingAck && it.message.header.type == MessageType.Acknowledgement.value) {
@@ -212,12 +211,16 @@ inline fun <reified R> Light.send(payload: LifxMessagePayload, ackRequired: Bool
                         }
                     }
                 }, { emitter.onError(it) })
-            }else{
+            } else {
                 emitter.onError(TransportNotConnectedException())
             }
         } else {
-            source.send(payload.targetTo(source.sourceId, id, address))
-            emitter.onComplete()
+            if (source.send(payload.targetTo(source.sourceId, id, address))) {
+                sideEffect?.invoke()
+                emitter.onComplete()
+            } else {
+                emitter.onError(TransportNotConnectedException())
+            }
         }
     }
 }

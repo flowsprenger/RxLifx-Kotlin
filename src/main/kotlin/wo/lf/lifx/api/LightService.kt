@@ -33,6 +33,16 @@ import wo.lf.lifx.net.TargetedLifxMessage
 import wo.lf.lifx.net.TransportFactory
 import java.util.concurrent.TimeUnit
 
+interface ILightFactory {
+    fun create(id: Long, source: ILightSource<LifxMessage<LifxMessagePayload>>, changeDispatcher: ILightsChangeDispatcher): Light
+}
+
+object DefaultLightFactory: ILightFactory {
+    override fun create(id: Long, source: ILightSource<LifxMessage<LifxMessagePayload>>, changeDispatcher: ILightsChangeDispatcher): Light {
+        return Light(id, source, changeDispatcher)
+    }
+}
+
 interface ILightSource<T> {
     fun send(message: TargetedLifxMessage<T>): Boolean
     val tick: Observable<Long>
@@ -40,7 +50,7 @@ interface ILightSource<T> {
     val messages: Flowable<SourcedLifxMessage<T>>
 }
 
-class LightService(transportFactory: TransportFactory, private val changeDispatcher: ILightChangeDispatcher, ioScheduler: Scheduler = Schedulers.io(), observeScheduler: Scheduler = Schedulers.single()) : ILightSource<LifxMessage<LifxMessagePayload>> {
+class LightService(transportFactory: TransportFactory, private val changeDispatcher: ILightsChangeDispatcher, private val lightFactory:ILightFactory = DefaultLightFactory, ioScheduler: Scheduler = Schedulers.io(), observeScheduler: Scheduler = Schedulers.single()) : ILightSource<LifxMessage<LifxMessagePayload>> {
 
     private val transport = transportFactory.create(0, LifxMessageParserImpl())
     private val legacyTransport = transportFactory.create(Lifx.defaultPort, LifxMessageParserImpl())
@@ -57,7 +67,7 @@ class LightService(transportFactory: TransportFactory, private val changeDispatc
 
     fun start(){
         disposables.add(messages.groupBy { it.message.header.target }.subscribe{ lightMessages ->
-            Light(lightMessages.key!!, this@LightService, changeDispatcher).apply {
+            lightFactory.create(lightMessages.key!!, this@LightService, changeDispatcher).apply {
                 changeDispatcher.onLightAdded(this)
                 disposables.add(attach(lightMessages))
             }

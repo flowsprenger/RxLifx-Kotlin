@@ -82,7 +82,23 @@ data class ProductInfo(val vendorId: Int, val productId: Int, val version: Int) 
         }
 }
 
-class Light(val id: Long, val source: ILightSource<LifxMessage<LifxMessagePayload>>, changeDispatcher: ILightChangeDispatcher, private val messageHandler: ILightMessageHandler = LightMessageHandler) {
+class Light(val id: Long, var source: ILightSource<LifxMessage<LifxMessagePayload>>, sourceChangeDispatcher: ILightChangeDispatcher, private val messageHandler: ILightMessageHandler = LightMessageHandler){
+
+    private val changeDispatcher = object : ILightChangeDispatcher{
+        val dispatchers = mutableSetOf(sourceChangeDispatcher)
+
+        override fun onLightChange(light: Light, property: LightProperty, oldValue: Any?, newValue: Any?) {
+            dispatchers.forEach { it.onLightChange(light, property, oldValue, newValue) }
+        }
+    }
+
+    fun addChangeDispatcher(dispatcher: ILightChangeDispatcher) {
+        changeDispatcher.dispatchers.add(dispatcher)
+    }
+
+    fun removeChangeDispatcher(dispatcher: ILightChangeDispatcher) {
+        changeDispatcher.dispatchers.remove(dispatcher)
+    }
 
     internal val updatedAtByProperty = mutableMapOf<LightProperty, Long>()
 

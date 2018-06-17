@@ -2443,7 +2443,7 @@ enum class PowerState(val value: Short) {
     OFF(0.toShort()),
     ON(65535.toShort()),
 
-    UNKNOWN(0);
+    UNKNOWN(1);
 
     companion object {
         private val ordinals = enumValues<PowerState>().associateBy { it.value }

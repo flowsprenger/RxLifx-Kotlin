@@ -21,9 +21,12 @@ package wo.lf.lifx.api
 
 import kotlin.reflect.KProperty
 
+interface ILightsChangeDispatcher: ILightChangeDispatcher {
+    fun onLightAdded(light: Light)
+}
+
 interface ILightChangeDispatcher {
     fun onLightChange(light: Light, property: LightProperty, oldValue: Any?, newValue: Any?)
-    fun onLightAdded(light: Light)
 }
 
 class LightChangeNotifier<T>(private val lightProperty: LightProperty, default: T, var changeDispatcher: ILightChangeDispatcher) {
