@@ -79,11 +79,17 @@ class UdpTransport<T>(val port: Int, private val parser: LifxMessageParser<T>, p
                     channel.send(DatagramPacket(array(), position(), it.target, Lifx.defaultPort))
                 }
             } catch (e: NotYetConnectedException) {
-                channel.disconnect()
+                channel.close()
             }
         }
 
         isConnected = true
+
+        emitter.setCancellable {
+            if(isConnected) {
+                channel.close()
+            }
+        }
 
         try {
             while (!emitter.isCancelled) {

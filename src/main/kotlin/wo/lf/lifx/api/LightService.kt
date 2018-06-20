@@ -55,7 +55,7 @@ class LightService(transportFactory: TransportFactory, private val changeDispatc
     private val transport = transportFactory.create(0, LifxMessageParserImpl())
     private val legacyTransport = transportFactory.create(Lifx.defaultPort, LifxMessageParserImpl())
 
-    override val messages: Flowable<SourcedLifxMessage<LifxMessage<LifxMessagePayload>>> = transport.messages.subscribeOn(ioScheduler).mergeWith(legacyTransport.messages.subscribeOn(ioScheduler)).observeOn(observeScheduler).discardBroadcasts().share()
+    override val messages: Flowable<SourcedLifxMessage<LifxMessage<LifxMessagePayload>>> = transport.messages.retryConnect().subscribeOn(ioScheduler).mergeWith(legacyTransport.messages.retryConnect().subscribeOn(ioScheduler)).observeOn(observeScheduler).discardBroadcasts().share()
     override val tick: Observable<Long> = Observable.interval(5L, TimeUnit.SECONDS).share()
     override val sourceId: Int = (Math.random() * Int.MAX_VALUE).toInt()
 
@@ -83,4 +83,8 @@ class LightService(transportFactory: TransportFactory, private val changeDispatc
     fun stop(){
         disposables.clear()
     }
+}
+
+private fun <T> Flowable<T>.retryConnect(): Flowable<T> {
+    return retryWhen { error -> error.flatMap { Flowable.timer(2, TimeUnit.SECONDS) } }
 }
