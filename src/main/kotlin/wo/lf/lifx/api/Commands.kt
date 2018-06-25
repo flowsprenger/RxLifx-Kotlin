@@ -75,7 +75,7 @@ object LightGetInfraredCommand {
 }
 
 object MultiZoneGetColorZonesCommand {
-    fun create(light: Light, startIndex: Int = 0, endIndex: Int = 255, ackRequired: Boolean = false, responseRequired: Boolean = true): Maybe<StateMultiZone> {
+    fun create(light: Light, startIndex: Int = 0, endIndex: Int = 255, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateMultiZone> {
         return light.send(GetColorZones(startIndex.toByte(), endIndex.toByte()), ackRequired, responseRequired)
     }
 }

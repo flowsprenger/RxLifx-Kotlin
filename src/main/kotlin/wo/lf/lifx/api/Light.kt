@@ -23,6 +23,8 @@ import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
 import io.reactivex.flowables.GroupedFlowable
 import wo.lf.lifx.api.Light.Companion.CLIENT_CHANGE_TIMEOUT
+import wo.lf.lifx.api.Light.Companion.defaultGroup
+import wo.lf.lifx.api.Light.Companion.defaultLocation
 import wo.lf.lifx.domain.*
 import wo.lf.lifx.extensions.broadcastAddress
 import wo.lf.lifx.extensions.capture
@@ -82,9 +84,25 @@ data class ProductInfo(val vendorId: Int, val productId: Int, val version: Int) 
         }
 }
 
-class Light(val id: Long, var source: ILightSource<LifxMessage<LifxMessagePayload>>, sourceChangeDispatcher: ILightChangeDispatcher, private val messageHandler: ILightMessageHandler = LightMessageHandler){
+data class DefaultLightState(
+        val address: InetAddress = broadcastAddress,
+        val lastSeenAt: Long = 0L,
+        val reachable: Boolean = false,
+        val label: String = "",
+        val color: HSBK = Lifx.defaultColor,
+        val power: PowerState = PowerState.OFF,
+        val group: StateGroup = defaultGroup,
+        val location: StateLocation = defaultLocation,
+        val hostFirmware: FirmwareVersion = FirmwareVersion.default,
+        val wifiFirmware: FirmwareVersion = FirmwareVersion.default,
+        val productInfo: ProductInfo = ProductInfo.default,
+        val infraredBrightness: Short = 0,
+        val zones: Zones = Zones(count = 0, colors = listOf())
+)
 
-    private val changeDispatcher = object : ILightChangeDispatcher{
+class Light(val id: Long, var source: ILightSource<LifxMessage<LifxMessagePayload>>, sourceChangeDispatcher: ILightChangeDispatcher, defaultState: DefaultLightState = DefaultLightState(), private val messageHandler: ILightMessageHandler = LightMessageHandler) {
+
+    private val changeDispatcher = object : ILightChangeDispatcher {
         val dispatchers = mutableSetOf(sourceChangeDispatcher)
 
         override fun onLightChange(light: Light, property: LightProperty, oldValue: Any?, newValue: Any?) {
@@ -101,8 +119,9 @@ class Light(val id: Long, var source: ILightSource<LifxMessage<LifxMessagePayloa
     }
 
     internal val updatedAtByProperty = mutableMapOf<LightProperty, Long>()
+    internal val zoneUpdatedAtByProperty = Array<Long>(80, { 0L })
 
-    var address: InetAddress = broadcastAddress
+    var address: InetAddress = defaultState.address
         internal set
 
     fun attach(messages: GroupedFlowable<Long, SourcedLifxMessage<LifxMessage<LifxMessagePayload>>>): Disposable {
@@ -155,35 +174,35 @@ class Light(val id: Long, var source: ILightSource<LifxMessage<LifxMessagePayloa
         reachable = lastSeenAt > Date().time - REACHABILITY_TIMEOUT
     }
 
-    var lastSeenAt: Long = 0L
+    var lastSeenAt: Long = defaultState.lastSeenAt
         private set
-    var reachable: Boolean by LightChangeNotifier(LightProperty.Reachable, false, changeDispatcher)
+    var reachable: Boolean by LightChangeNotifier(LightProperty.Reachable, defaultState.reachable, changeDispatcher)
         private set
 
-    var label: String by LightChangeNotifier(LightProperty.Label, "", changeDispatcher)
+    var label: String by LightChangeNotifier(LightProperty.Label, defaultState.label, changeDispatcher)
         internal set
-    var color: HSBK by LightChangeNotifier(LightProperty.Color, Lifx.defaultColor, changeDispatcher)
+    var color: HSBK by LightChangeNotifier(LightProperty.Color, defaultState.color, changeDispatcher)
         internal set
-    var power: PowerState by LightChangeNotifier(LightProperty.Power, PowerState.OFF, changeDispatcher)
-        internal set
-
-    var group: StateGroup by LightChangeNotifier(LightProperty.Group, defaultGroup, changeDispatcher)
-        internal set
-    var location: StateLocation by LightChangeNotifier(LightProperty.Location, defaultLocation, changeDispatcher)
+    var power: PowerState by LightChangeNotifier(LightProperty.Power, defaultState.power, changeDispatcher)
         internal set
 
-    var hostFirmware: FirmwareVersion by LightChangeNotifier(LightProperty.HostFirmware, FirmwareVersion.default, changeDispatcher)
+    var group: StateGroup by LightChangeNotifier(LightProperty.Group, defaultState.group, changeDispatcher)
         internal set
-    var wifiFirmware: FirmwareVersion by LightChangeNotifier(LightProperty.WifiFirmware, FirmwareVersion.default, changeDispatcher)
-        internal set
-
-    var productInfo: ProductInfo by LightChangeNotifier(LightProperty.ProductInfo, ProductInfo.default, changeDispatcher)
+    var location: StateLocation by LightChangeNotifier(LightProperty.Location, defaultState.location, changeDispatcher)
         internal set
 
-    var infraredBrightness: Short by LightChangeNotifier(LightProperty.InfraredBrightness, 0, changeDispatcher)
+    var hostFirmware: FirmwareVersion by LightChangeNotifier(LightProperty.HostFirmware, defaultState.hostFirmware, changeDispatcher)
+        internal set
+    var wifiFirmware: FirmwareVersion by LightChangeNotifier(LightProperty.WifiFirmware, defaultState.wifiFirmware, changeDispatcher)
         internal set
 
-    var zones: Zones by LightChangeNotifier(LightProperty.Zones, Zones(count = 0, colors = listOf()), changeDispatcher)
+    var productInfo: ProductInfo by LightChangeNotifier(LightProperty.ProductInfo, defaultState.productInfo, changeDispatcher)
+        internal set
+
+    var infraredBrightness: Short by LightChangeNotifier(LightProperty.InfraredBrightness, defaultState.infraredBrightness, changeDispatcher)
+        internal set
+
+    var zones: Zones by LightChangeNotifier(LightProperty.Zones, defaultState.zones, changeDispatcher)
         internal set
 
     private var sequence: Byte = 0
@@ -206,7 +225,19 @@ enum class LightChangeSource {
 internal inline fun Light.update(source: LightChangeSource, property: LightProperty, apply: () -> Unit) {
     val now = Date().time
     if (source == LightChangeSource.Client || updatedAtByProperty.getOrDefault(property, 0) + CLIENT_CHANGE_TIMEOUT < now) {
-        updatedAtByProperty[property] = now
+        if (source == LightChangeSource.Client) {
+            updatedAtByProperty[property] = now
+        }
+        apply()
+    }
+}
+
+internal inline fun Light.updateZone(source: LightChangeSource, property: LightProperty, range: IntRange, apply: () -> Unit) {
+    val now = Date().time
+    if (source == LightChangeSource.Client || range.any { zoneUpdatedAtByProperty[it] + CLIENT_CHANGE_TIMEOUT < now } ) {
+        if (source == LightChangeSource.Client) {
+            updatedAtByProperty[property] = now
+        }
         apply()
     }
 }

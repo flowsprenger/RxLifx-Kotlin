@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.2.41'
+    ext.kotlin_version = '1.2.50'
 
     repositories {
         mavenCentral()
@@ -14,7 +14,7 @@ plugins {
     id "com.jfrog.bintray" version "1.7.3"
 }
 
-version "0.0.8"
+version "0.0.8.5"
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
@@ -60,7 +60,7 @@ bintray {
             desc = 'RxLifx-Kotlin'
             released  = new Date()
             vcsTag = "$version"
-            attributes = ['gradle-plugin': 'com.use.less:com.use.less.gradle:gradle-useless-plugin']
+            attributes = [:]
         }
     }
     publications = ['MyPublication']

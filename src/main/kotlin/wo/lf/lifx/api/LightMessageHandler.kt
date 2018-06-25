@@ -1,12 +1,13 @@
 package wo.lf.lifx.api
 
 import wo.lf.lifx.domain.*
+import java.lang.Integer.min
 
 interface ILightMessageHandler {
     fun handleMessage(light: Light, payload: LifxMessagePayload)
 }
 
-object LightMessageHandler: ILightMessageHandler {
+object LightMessageHandler : ILightMessageHandler {
 
     override fun handleMessage(light: Light, payload: LifxMessagePayload) {
         light.apply {
@@ -53,33 +54,35 @@ object LightMessageHandler: ILightMessageHandler {
                     }
                 }
                 is StateZone -> {
-                    update(LightChangeSource.Device, LightProperty.Zones) {
+                    val index = payload.index.toInt()
+                    updateZone(LightChangeSource.Device, LightProperty.Zones, index .. index + 1) {
                         val count = payload.count.toInt()
-                        val index = payload.index.toInt()
                         val firstAfter = index + 1
-                        if (zones.count != count || zones.colors[index] != payload.color) {
-                            zones = Zones(count = count, colors = List(index,
-                                    { zones.colors.getOrNull(it) ?: Lifx.defaultColor })
-                                            .plus(listOf(payload.color)
-                                            .plus(List(count - firstAfter, {
+                        if (zones.count != count || zones.count < index || zones.colors[index] != payload.color) {
+                            zones = Zones(count = count, colors = List(index) {
+                                zones.colors.getOrNull(it) ?: Lifx.defaultColor
+                            }
+                                    .plus(listOf(payload.color)
+                                            .plus(List(count - firstAfter) {
                                                 zones.colors.getOrNull(firstAfter + it) ?: Lifx.defaultColor
-                                            })))
+                                            }))
                             )
                         }
                     }
                 }
                 is StateMultiZone -> {
-                    update(LightChangeSource.Device, LightProperty.Zones) {
-                        val count = payload.count.toInt()
-                        val index = payload.index.toInt()
+                    val index = payload.index.toInt()
+                    val count = payload.count.toInt()
+                    updateZone(LightChangeSource.Device, LightProperty.Zones, index .. min(count, payload.index + 8)) {
                         val firstAfter = Math.min(index + 8, count)
-                        if (zones.count != count || zones.colors.subList(index, firstAfter) != payload.color.toList().subList(0, Math.min(8, count - index))) {
-                            zones = Zones(count = count, colors = List(index,
-                                    { zones.colors.getOrNull(it) ?: Lifx.defaultColor })
+                        if (zones.count != count || zones.count < firstAfter || zones.colors.subList(index, firstAfter) != payload.color.toList().subList(0, Math.min(8, count - index))) {
+                            zones = Zones(count = count, colors = List(index) {
+                                zones.colors.getOrNull(it) ?: Lifx.defaultColor
+                            }
                                     .plus(payload.color.map { it }.subList(0, Math.min(8, count - index))
-                                            .plus(List(count - firstAfter, {
+                                            .plus(List(count - firstAfter) {
                                                 zones.colors.getOrNull(firstAfter + it) ?: Lifx.defaultColor
-                                            })))
+                                            }))
                             )
                         }
                     }
