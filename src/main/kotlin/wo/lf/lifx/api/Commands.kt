@@ -21,8 +21,11 @@ package wo.lf.lifx.api
 
 import io.reactivex.Completable
 import io.reactivex.Maybe
+import io.reactivex.Single
 import wo.lf.lifx.domain.*
 import wo.lf.lifx.extensions.broadcastTo
+import wo.lf.lifx.extensions.copy
+import wo.lf.lifx.extensions.retryTimes
 import wo.lf.lifx.extensions.targetTo
 import java.util.concurrent.TimeUnit
 
@@ -163,6 +166,35 @@ object DeviceSetLabelCommand {
     }
 }
 
+object LightSetBrightness {
+    fun create(light: Light, brightness: Short, duration: Int, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return if (light.productInfo.hasMultiZoneSupport) {
+            LightSetWaveformOptionalCommand.create(
+                    light = light,
+                    transient = false,
+                    color = light.color.copy(brightness = brightness),
+                    period = duration,
+                    cycles = 1f,
+                    skewRatio = 0,
+                    waveform = WaveformType.SAW,
+                    setHue = false,
+                    setSaturation = false,
+                    setBrightness = true,
+                    setKelvin = false
+            )
+        } else {
+            LightSetColorCommand.create(
+                    light = light,
+                    color = light.color.copy(brightness = brightness),
+                    duration = duration,
+                    ackRequired = ackRequired,
+                    responseRequired = responseRequired
+            )
+        }
+    }
+}
+
+
 fun Boolean.toByte(): Byte {
     if (this) {
         return 1
@@ -185,15 +217,28 @@ fun LightService.broadcast(payload: LifxMessagePayload): Completable {
 }
 
 inline fun <reified R> Light.send(payload: LifxMessagePayload, ackRequired: Boolean = false, responseRequired: Boolean = false, noinline sideEffect: (() -> Unit)? = null): Maybe<R> {
-    return Maybe.create<R> { emitter ->
-        if (ackRequired || responseRequired) {
-            var awaitingAck = ackRequired
-            var awaitingResponse = responseRequired
-            var response: R? = null
+
+
+    return if (ackRequired || responseRequired) {
+        var awaitingAck = ackRequired
+        var awaitingResponse = responseRequired
+        var response: R? = null
+
+        val sender = Single.create<Byte> {
             val sequence = getNextSequence()
             if (source.send(payload.targetTo(source.sourceId, id, address, sequence))) {
                 sideEffect?.invoke()
-                source.messages.filter { it.message.header.target == id && it.message.header.source == source.sourceId && it.message.header.sequence == sequence }.timeout(2L, TimeUnit.SECONDS).subscribe({
+                it.onSuccess(sequence)
+            } else {
+                it.onError(TransportNotConnectedException())
+            }
+        }
+
+        sender
+                .flatMapPublisher { sequence ->
+                    source.messages.filter { it.message.header.target == id && it.message.header.source == source.sourceId && it.message.header.sequence == sequence }
+                }
+                .skipWhile {
                     if (awaitingAck && it.message.header.type == MessageType.Acknowledgement.value) {
                         awaitingAck = false
                     }
@@ -203,25 +248,29 @@ inline fun <reified R> Light.send(payload: LifxMessagePayload, ackRequired: Bool
                         awaitingResponse = false
                     }
 
-                    if (!awaitingResponse && !awaitingAck) {
-                        if (awaitingResponse) {
-                            emitter.onSuccess(response!!)
-                        } else {
-                            emitter.onComplete()
-                        }
+                    !(!awaitingResponse && !awaitingAck)
+                }
+                .singleOrError()
+                .flatMapMaybe {
+                    if (awaitingResponse) {
+                        Maybe.just(response!!)
+                    } else {
+                        Maybe.empty()
                     }
-                }, { emitter.onError(it) })
-            } else {
-                emitter.onError(TransportNotConnectedException())
-            }
-        } else {
+                }
+                .timeout(100, TimeUnit.MILLISECONDS, source.ioScheduler)
+                .retryTimes(3)
+    } else {
+        val sender = Single.create<Boolean> {
             if (source.send(payload.targetTo(source.sourceId, id, address))) {
                 sideEffect?.invoke()
-                emitter.onComplete()
+                it.onSuccess(true)
             } else {
-                emitter.onError(TransportNotConnectedException())
+                it.onError(TransportNotConnectedException())
             }
         }
+
+        sender.flatMapMaybe { Maybe.empty<R>() }
     }
 }
 

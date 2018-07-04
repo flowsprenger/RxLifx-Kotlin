@@ -48,15 +48,16 @@ interface ILightSource<T> {
     val tick: Observable<Long>
     val sourceId: Int
     val messages: Flowable<SourcedLifxMessage<T>>
+    val ioScheduler: Scheduler
 }
 
-class LightService(transportFactory: TransportFactory, private val changeDispatcher: ILightsChangeDispatcher, private val lightFactory:ILightFactory = DefaultLightFactory, ioScheduler: Scheduler = Schedulers.io(), observeScheduler: Scheduler = Schedulers.single()) : ILightSource<LifxMessage<LifxMessagePayload>> {
+class LightService(transportFactory: TransportFactory, private val changeDispatcher: ILightsChangeDispatcher, private val lightFactory: ILightFactory = DefaultLightFactory, override val ioScheduler: Scheduler = Schedulers.io(), observeScheduler: Scheduler = Schedulers.single()) : ILightSource<LifxMessage<LifxMessagePayload>> {
 
     private val transport = transportFactory.create(0, LifxMessageParserImpl())
     private val legacyTransport = transportFactory.create(Lifx.defaultPort, LifxMessageParserImpl())
 
     override val messages: Flowable<SourcedLifxMessage<LifxMessage<LifxMessagePayload>>> = transport.messages.retryConnect().subscribeOn(ioScheduler).mergeWith(legacyTransport.messages.retryConnect().subscribeOn(ioScheduler)).observeOn(observeScheduler).discardBroadcasts().share()
-    override val tick: Observable<Long> = Observable.interval(5L, TimeUnit.SECONDS).share()
+    override val tick: Observable<Long> = Observable.interval(REFRESH_INTERVAL_SECONDS, TimeUnit.SECONDS).share()
     override val sourceId: Int = (Math.random() * Int.MAX_VALUE).toInt()
 
     private val disposables = CompositeDisposable()
@@ -82,6 +83,10 @@ class LightService(transportFactory: TransportFactory, private val changeDispatc
 
     fun stop(){
         disposables.clear()
+    }
+
+    companion object {
+        const val REFRESH_INTERVAL_SECONDS = 5L
     }
 }
 

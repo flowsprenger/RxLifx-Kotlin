@@ -23,6 +23,7 @@ import io.reactivex.Completable
 import io.reactivex.Maybe
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
+import io.reactivex.functions.BiFunction
 
 fun Disposable.capture(disposables: CompositeDisposable) {
     disposables.add(this)
@@ -34,4 +35,15 @@ fun <T> Maybe<T>.fireAndForget(): Disposable {
 
 fun Completable.fireAndForget(): Disposable {
     return subscribe({}, {})
+}
+
+fun <T> Maybe<T>.retryTimes(count: Int): Maybe<T> {
+    return retryWhen { errors ->
+        errors.zipWith(io.reactivex.Flowable.range(1, count), BiFunction<Throwable, Int, Int> { error, i ->
+            if (i == count) {
+                throw error
+            }
+            i
+        })
+    }
 }

@@ -21,6 +21,7 @@ package wo.lf.lifx.extensions
 
 import io.reactivex.Flowable
 import wo.lf.lifx.api.LifxMessage
+import wo.lf.lifx.domain.HSBK
 import wo.lf.lifx.domain.Header
 import wo.lf.lifx.domain.LifxMessagePayload
 import wo.lf.lifx.net.SourcedLifxMessage
@@ -95,4 +96,10 @@ fun Header.getAckRequired(): Boolean {
 
 fun Flowable<SourcedLifxMessage<LifxMessage<LifxMessagePayload>>>.discardBroadcasts():Flowable<SourcedLifxMessage<LifxMessage<LifxMessagePayload>>>{
     return filter{ it.message.header.target != 0L }
+}
+
+fun HSBK.copy(hue: Short? = null, saturation: Short? = null, brightness: Short? = null, kelvin: Short? = null): HSBK {
+    return HSBK(hue = hue ?: this.hue, saturation = saturation
+            ?: this.saturation, brightness = brightness ?: this.brightness, kelvin = kelvin
+            ?: this.kelvin)
 }
