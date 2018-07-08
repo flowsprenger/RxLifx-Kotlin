@@ -194,6 +194,20 @@ object LightSetBrightness {
     }
 }
 
+object MultiZoneSetColorCommand {
+    fun create(light: Light, color: HSBK, startIndex: Int, endIndex: Int, duration: Int, apply: ApplicationRequest = ApplicationRequest.APPLY, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(SetColorZones(startIndex.toByte(), endIndex.toByte(), color, duration, apply), ackRequired, responseRequired) {
+            light.update(LightChangeSource.Client, LightProperty.Color) {
+                val start = Math.max(0, startIndex)
+                val after = Math.min(light.zones.count, endIndex)
+                light.zones = Zones(count = light.zones.count, colors = light.zones.colors.subList(0, start).plus(List(after - start, { color })).plus(light.zones.colors.subList(after, light.zones.colors.size)))
+                if (startIndex == 0) {
+                    light.color = color
+                }
+            }
+        }
+    }
+}
 
 fun Boolean.toByte(): Byte {
     if (this) {
@@ -203,7 +217,7 @@ fun Boolean.toByte(): Byte {
 }
 
 fun String.maxLengthPadNull(length: Int): String {
-    return substring(0, length).padEnd(length, '\u0000')
+    return substring(0, Math.min(length, this.length)).padEnd(length, '\u0000')
 }
 
 fun LightService.broadcast(payload: LifxMessagePayload): Completable {
