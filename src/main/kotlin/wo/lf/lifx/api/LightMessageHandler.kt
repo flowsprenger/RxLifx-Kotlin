@@ -87,7 +87,22 @@ object LightMessageHandler : ILightMessageHandler {
                         }
                     }
                 }
-                is StateService -> {
+                is LightStatePower -> {
+                    update(LightChangeSource.Device, LightProperty.Power) {
+                        power = PowerState.fromValue(payload.level)
+                    }
+                }
+                is StatePower -> {
+                    update(LightChangeSource.Device, LightProperty.Power) {
+                        power = PowerState.fromValue(payload.level)
+                    }
+                }
+                is StateLabel -> {
+                    update(LightChangeSource.Device, LightProperty.Label) {
+                        label = String(payload.label).trimNullbytes()
+                    }
+                }
+                is StateService, is StateWifiInfo, is StateHostInfo, is EchoResponse -> {
                     // NOOP
                 }
                 is SetPower, is LightSetWaveformOptional, is LightSetWaveform, is LightSetPower, is LightSetColor, is SetGroup, is SetLocation, is SetLabel, is SetInfrared, is SetColorZones -> {

@@ -35,21 +35,9 @@ object BroadcastGetServiceCommand {
     }
 }
 
-object LightGetCommand {
-    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
-        return light.send(LightGet(), ackRequired, responseRequired)
-    }
-}
-
-object DeviceGetGroupCommand {
-    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateGroup> {
-        return light.send(GetGroup(), ackRequired, responseRequired)
-    }
-}
-
-object DeviceGetLocationCommand {
-    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateLocation> {
-        return light.send(GetLocation(), ackRequired, responseRequired)
+object DeviceGetHostInfoCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateHostInfo> {
+        return light.send(GetHostInfo(), ackRequired, responseRequired)
     }
 }
 
@@ -59,9 +47,49 @@ object DeviceGetHostFirmwareCommand {
     }
 }
 
+object DeviceGetWifiInfoCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateWifiInfo> {
+        return light.send(GetWifiInfo(), ackRequired, responseRequired)
+    }
+}
+
 object DeviceGetWifiFirmwareCommand {
     fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateWifiFirmware> {
         return light.send(GetWifiFirmware(), ackRequired, responseRequired)
+    }
+}
+
+object DeviceGetPowerCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StatePower> {
+        return light.send(GetPower(), ackRequired, responseRequired)
+    }
+}
+
+object DeviceSetPowerCommand {
+    fun create(light: Light, status: Boolean, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StatePower> {
+        val power: Short = if (status) 0xffff.toShort() else 0
+        return light.send(SetPower(level = power), ackRequired, responseRequired) {
+            light.update(LightChangeSource.Client, LightProperty.Power) {
+                light.power = PowerState.fromValue(power)
+            }
+        }
+    }
+}
+
+object DeviceGetLabelCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateLabel> {
+        return light.send(GetLabel(), ackRequired, responseRequired)
+    }
+}
+
+object DeviceSetLabelCommand {
+    fun create(light: Light, label: String, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateGroup> {
+        val sanitizedLabel = label.maxLengthPadNull(32)
+        return light.send(SetLabel(sanitizedLabel.toByteArray()), ackRequired, responseRequired) {
+            light.update(LightChangeSource.Client, LightProperty.Label) {
+                light.label = sanitizedLabel.trimNullbytes()
+            }
+        }
     }
 }
 
@@ -71,73 +99,15 @@ object DeviceGetVersionCommand {
     }
 }
 
-object LightGetInfraredCommand {
-    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = true): Maybe<StateInfrared> {
-        return light.send(GetInfrared(), ackRequired, responseRequired)
+object DeviceGetInfoCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateInfo> {
+        return light.send(GetInfo(), ackRequired, responseRequired)
     }
 }
 
-object MultiZoneGetColorZonesCommand {
-    fun create(light: Light, startIndex: Int = 0, endIndex: Int = 255, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateMultiZone> {
-        return light.send(GetColorZones(startIndex.toByte(), endIndex.toByte()), ackRequired, responseRequired)
-    }
-}
-
-object LightSetColorCommand {
-    fun create(light: Light, color: HSBK, duration: Int, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
-        return light.send(LightSetColor(0.toByte(), color, duration), ackRequired, responseRequired) {
-            light.update(LightChangeSource.Client, LightProperty.Color) {
-                light.color = color
-            }
-        }
-    }
-}
-
-object LightSetInfraredCommand {
-    fun create(light: Light, brightness: Short, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateInfrared> {
-        return light.send(SetInfrared(brightness), ackRequired, responseRequired) {
-            light.update(LightChangeSource.Client, LightProperty.InfraredBrightness) {
-                light.infraredBrightness = brightness
-            }
-        }
-    }
-}
-
-object LightSetPowerCommand {
-    fun create(light: Light, status: Boolean, duration: Int, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightStatePower> {
-        val power: Short = if (status) 0xffff.toShort() else 0
-        return light.send(LightSetPower(level = power, duration = duration), ackRequired, responseRequired) {
-            light.update(LightChangeSource.Client, LightProperty.Power) {
-                light.power = PowerState.fromValue(power)
-            }
-        }
-    }
-}
-
-object LightSetWaveformCommand {
-    fun create(light: Light, transient: Boolean, color: HSBK, period: Int, cycles: Float, skewRatio: Short, waveform: WaveformType, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
-        return light.send(LightSetWaveform(0, transient.toByte(), color, period, cycles, skewRatio, waveform), ackRequired, responseRequired)
-    }
-}
-
-object LightSetWaveformOptionalCommand {
-    fun create(light: Light, transient: Boolean, color: HSBK, period: Int, cycles: Float, skewRatio: Short, waveform: WaveformType, setHue: Boolean, setSaturation: Boolean, setBrightness: Boolean, setKelvin: Boolean, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
-        return light.send(LightSetWaveformOptional(0, transient.toByte(), color, period, cycles, skewRatio, waveform, setHue.toByte(), setSaturation.toByte(), setBrightness.toByte(), setKelvin.toByte()), ackRequired, responseRequired)
-    }
-}
-
-
-object DeviceSetGroupCommand {
-    fun create(light: Light, group: Array<Byte>, label: String, updatedAt: Long, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateGroup> {
-        return create(light, group, label.maxLengthPadNull(32).toByteArray(), updatedAt, ackRequired, responseRequired)
-    }
-
-    fun create(light: Light, group: Array<Byte>, label: ByteArray, updatedAt: Long, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateGroup> {
-        return light.send(SetGroup(group, label, updatedAt), ackRequired, responseRequired) {
-            light.update(LightChangeSource.Client, LightProperty.Group) {
-                light.group = StateGroup(group, label, updatedAt)
-            }
-        }
+object DeviceGetLocationCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateLocation> {
+        return light.send(GetLocation(), ackRequired, responseRequired)
     }
 }
 
@@ -155,16 +125,114 @@ object DeviceSetLocationCommand {
     }
 }
 
-object DeviceSetLabelCommand {
-    fun create(light: Light, label: String, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateGroup> {
-        val sanitizedLabel = label.maxLengthPadNull(32)
-        return light.send(SetLabel(sanitizedLabel.toByteArray()), ackRequired, responseRequired) {
-            light.update(LightChangeSource.Client, LightProperty.Label) {
-                light.label = sanitizedLabel.trimNullbytes()
+object DeviceGetGroupCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateGroup> {
+        return light.send(GetGroup(), ackRequired, responseRequired)
+    }
+}
+
+object DeviceSetGroupCommand {
+    fun create(light: Light, group: Array<Byte>, label: String, updatedAt: Long, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateGroup> {
+        return create(light, group, label.maxLengthPadNull(32).toByteArray(), updatedAt, ackRequired, responseRequired)
+    }
+
+    fun create(light: Light, group: Array<Byte>, label: ByteArray, updatedAt: Long, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateGroup> {
+        return light.send(SetGroup(group, label, updatedAt), ackRequired, responseRequired) {
+            light.update(LightChangeSource.Client, LightProperty.Group) {
+                light.group = StateGroup(group, label, updatedAt)
             }
         }
     }
 }
+
+object DeviceEchoRequestCommand {
+    fun create(light: Light, echo: String, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<EchoResponse> {
+        return light.send(EchoRequest(echo.maxLengthPadNull(64).toByteArray().toTypedArray()), ackRequired, responseRequired)
+    }
+}
+
+object LightGetCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(LightGet(), ackRequired, responseRequired)
+    }
+}
+
+object LightSetColorCommand {
+    fun create(light: Light, color: HSBK, duration: Int, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(LightSetColor(0.toByte(), color, duration), ackRequired, responseRequired) {
+            light.update(LightChangeSource.Client, LightProperty.Color) {
+                light.color = color
+            }
+        }
+    }
+}
+
+object LightSetWaveformCommand {
+    fun create(light: Light, transient: Boolean, color: HSBK, period: Int, cycles: Float, skewRatio: Short, waveform: WaveformType, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(LightSetWaveform(0, transient.toByte(), color, period, cycles, skewRatio, waveform), ackRequired, responseRequired)
+    }
+}
+
+object LightSetWaveformOptionalCommand {
+    fun create(light: Light, transient: Boolean, color: HSBK, period: Int, cycles: Float, skewRatio: Short, waveform: WaveformType, setHue: Boolean, setSaturation: Boolean, setBrightness: Boolean, setKelvin: Boolean, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(LightSetWaveformOptional(0, transient.toByte(), color, period, cycles, skewRatio, waveform, setHue.toByte(), setSaturation.toByte(), setBrightness.toByte(), setKelvin.toByte()), ackRequired, responseRequired)
+    }
+}
+
+object LightGetPowerCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightStatePower> {
+        return light.send(LightGetPower(), ackRequired, responseRequired)
+    }
+}
+
+object LightSetPowerCommand {
+    fun create(light: Light, status: Boolean, duration: Int, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightStatePower> {
+        val power: Short = if (status) 0xffff.toShort() else 0
+        return light.send(LightSetPower(level = power, duration = duration), ackRequired, responseRequired) {
+            light.update(LightChangeSource.Client, LightProperty.Power) {
+                light.power = PowerState.fromValue(power)
+            }
+        }
+    }
+}
+
+object LightGetInfraredCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = true): Maybe<StateInfrared> {
+        return light.send(GetInfrared(), ackRequired, responseRequired)
+    }
+}
+
+object LightSetInfraredCommand {
+    fun create(light: Light, brightness: Short, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateInfrared> {
+        return light.send(SetInfrared(brightness), ackRequired, responseRequired) {
+            light.update(LightChangeSource.Client, LightProperty.InfraredBrightness) {
+                light.infraredBrightness = brightness
+            }
+        }
+    }
+}
+
+object MultiZoneSetColorZonesCommand {
+    fun create(light: Light, color: HSBK, startIndex: Int, endIndex: Int, duration: Int, apply: ApplicationRequest = ApplicationRequest.APPLY, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
+        return light.send(SetColorZones(startIndex.toByte(), endIndex.toByte(), color, duration, apply), ackRequired, responseRequired) {
+            light.update(LightChangeSource.Client, LightProperty.Color) {
+                val start = Math.max(0, startIndex)
+                val after = Math.min(light.zones.count, endIndex)
+                light.zones = Zones(count = light.zones.count, colors = light.zones.colors.subList(0, start).plus(List(after - start, { color })).plus(light.zones.colors.subList(after, light.zones.colors.size)))
+                if (startIndex == 0) {
+                    light.color = color
+                }
+            }
+        }
+    }
+}
+
+object MultiZoneGetColorZonesCommand {
+    fun create(light: Light, startIndex: Int = 0, endIndex: Int = 255, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateMultiZone> {
+        return light.send(GetColorZones(startIndex.toByte(), endIndex.toByte()), ackRequired, responseRequired)
+    }
+}
+
 
 object LightSetBrightness {
     fun create(light: Light, brightness: Short, duration: Int, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
@@ -190,21 +258,6 @@ object LightSetBrightness {
                     ackRequired = ackRequired,
                     responseRequired = responseRequired
             )
-        }
-    }
-}
-
-object MultiZoneSetColorCommand {
-    fun create(light: Light, color: HSBK, startIndex: Int, endIndex: Int, duration: Int, apply: ApplicationRequest = ApplicationRequest.APPLY, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {
-        return light.send(SetColorZones(startIndex.toByte(), endIndex.toByte(), color, duration, apply), ackRequired, responseRequired) {
-            light.update(LightChangeSource.Client, LightProperty.Color) {
-                val start = Math.max(0, startIndex)
-                val after = Math.min(light.zones.count, endIndex)
-                light.zones = Zones(count = light.zones.count, colors = light.zones.colors.subList(0, start).plus(List(after - start, { color })).plus(light.zones.colors.subList(after, light.zones.colors.size)))
-                if (startIndex == 0) {
-                    light.color = color
-                }
-            }
         }
     }
 }
