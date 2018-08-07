@@ -234,7 +234,7 @@ internal inline fun Light.update(source: LightChangeSource, property: LightPrope
 
 internal inline fun Light.updateZone(source: LightChangeSource, property: LightProperty, range: IntRange, apply: () -> Unit) {
     val now = Date().time
-    if (source == LightChangeSource.Client || range.any { zoneUpdatedAtByProperty[it] + CLIENT_CHANGE_TIMEOUT < now } ) {
+    if (source == LightChangeSource.Client || range.any { zoneUpdatedAtByProperty[it] + CLIENT_CHANGE_TIMEOUT < now }) {
         if (source == LightChangeSource.Client) {
             updatedAtByProperty[property] = now
         }
@@ -243,7 +243,12 @@ internal inline fun Light.updateZone(source: LightChangeSource, property: LightP
 }
 
 internal fun String.trimNullbytes(): String {
-    return substring(0, this.indexOf('\u0000'))
+    val nullBytePosition = this.indexOf('\u0000')
+    return if (nullBytePosition != -1) {
+        substring(0, nullBytePosition)
+    } else {
+        this
+    }
 }
 
 val StateGroup.name

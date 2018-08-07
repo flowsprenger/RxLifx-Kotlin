@@ -56,7 +56,7 @@ class CommandsKtTest : Spek({
     }
 })
 
-class TestLightChangeDispatcher : ILightChangeDispatcher {
+open class TestLightChangeDispatcher : ILightChangeDispatcher {
     override fun onLightChange(light: Light, property: LightProperty, oldValue: Any?, newValue: Any?) {
 
     }
