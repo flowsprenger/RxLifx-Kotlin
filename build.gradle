@@ -1,7 +1,7 @@
 
 
 buildscript {
-    ext.kotlin_version = '1.2.51'
+    ext.kotlin_version = '1.2.60'
 
     repositories {
         mavenCentral()
@@ -21,7 +21,7 @@ plugins {
 
 apply plugin: 'org.junit.platform.gradle.plugin'
 
-version "0.0.9.0"
+version "0.0.10"
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
@@ -73,10 +73,10 @@ bintray {
         licenses = ['MIT']
         vcsUrl = 'https://github.com/flowsprenger/RxLifx-Kotlin'
         version {
-            name = "$version"
+            name = "$project.version"
             desc = 'RxLifx-Kotlin'
             released  = new Date()
-            vcsTag = "$version"
+            vcsTag = "$project.version"
             attributes = [:]
         }
     }

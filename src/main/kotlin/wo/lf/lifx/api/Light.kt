@@ -100,7 +100,55 @@ data class DefaultLightState(
         val zones: Zones = Zones(count = 0, colors = listOf())
 )
 
-class Light(val id: Long, var source: ILightSource<LifxMessage<LifxMessagePayload>>, sourceChangeDispatcher: ILightChangeDispatcher, defaultState: DefaultLightState = DefaultLightState(), private val messageHandler: ILightMessageHandler = LightMessageHandler) {
+sealed class LifxEntity {
+    abstract val entityId: Int
+    abstract val lights: List<Light>
+}
+
+class Location(val id: Array<Byte>) : LifxEntity() {
+
+    override val entityId: Int by lazy { Arrays.hashCode(id) }
+
+    internal val groupsById: MutableMap<Array<Byte>, Group> = mutableMapOf()
+
+    val groups: List<Group>
+        get() = groupsById.values.toList()
+
+    override val lights: List<Light>
+        get() = groupsById.values.fold(listOf()) { acc, group -> acc.plus(group.lights) }
+
+    val name
+        get() = groups.flatMap { it.lights }.fold(Light.defaultLocation) { newestLocation, light ->
+            if (light.location.updated_at > newestLocation.updated_at) {
+                light.location
+            } else {
+                newestLocation
+            }
+        }.name
+}
+
+class Group(val id: Array<Byte>) : LifxEntity() {
+    override val entityId: Int by lazy { Arrays.hashCode(id) }
+
+    override var lights: List<Light> = listOf()
+        internal set
+
+    val name
+        get() = lights.fold(Light.defaultGroup) { newestGroup, light ->
+            if (light.group.updated_at > newestGroup.updated_at) {
+                light.group
+            } else {
+                newestGroup
+            }
+        }.name
+
+
+}
+
+class Light(val id: Long, var source: ILightSource<LifxMessage<LifxMessagePayload>>, sourceChangeDispatcher: ILightChangeDispatcher, defaultState: DefaultLightState = DefaultLightState(), private val messageHandler: ILightMessageHandler = LightMessageHandler) : LifxEntity() {
+    override val entityId: Int by lazy { id.hashCode() }
+
+    override val lights: List<Light> = listOf(this)
 
     private val changeDispatcher = object : ILightChangeDispatcher {
         val dispatchers = mutableSetOf(sourceChangeDispatcher)

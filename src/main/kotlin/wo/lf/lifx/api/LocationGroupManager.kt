@@ -20,6 +20,9 @@ class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDis
         get() = locationsById.values.toList()
 
     override fun onLightAdded(light: Light) {
+        if (locationsById[light.location.location]?.groupsById?.get(light.group.group)?.lights?.contains(light) == true) {
+            return
+        }
         addToLocationAndGroup(light)
         wrappedChangeDispatcher.onLightAdded(light)
     }
@@ -102,42 +105,10 @@ class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDis
         }
         throw IllegalStateException("cannot find location")
     }
+
+    fun getLocationGroup(light: Light): Pair<Location, Group> {
+        return getLocationGroup(light.location.location, light.group.group)
+    }
 }
 
-class Location(val id: Array<Byte>) {
-
-    internal val groupsById: MutableMap<Array<Byte>, Group> = mutableMapOf()
-
-    val groups: List<Group>
-        get() = groupsById.values.toList()
-
-    val lights: List<Light>
-        get() = groupsById.values.fold(listOf()) { acc, group -> acc.plus(group.lights) }
-
-    val name
-        get() = groups.flatMap { it.lights }.fold(Light.defaultLocation) { newestLocation, light ->
-            if (light.location.updated_at > newestLocation.updated_at) {
-                light.location
-            } else {
-                newestLocation
-            }
-        }.name
-}
-
-class Group(val id: Array<Byte>) {
-
-    var lights: List<Light> = listOf()
-        internal set
-
-    val name
-        get() = lights.fold(Light.defaultGroup) { newestGroup, light ->
-            if (light.group.updated_at > newestGroup.updated_at) {
-                light.group
-            } else {
-                newestGroup
-            }
-        }.name
-
-
-}
 

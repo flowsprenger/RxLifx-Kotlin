@@ -34,7 +34,7 @@ interface LifxMessagePayload : LifxMessageSerializable {
     val _type: Int
 }
 
-object Lifx{
+object Lifx {
     val defaultColor = HSBK(0, 0, 0, 3500)
     val defaultPort = 56700
 }
