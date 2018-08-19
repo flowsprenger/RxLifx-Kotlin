@@ -19,14 +19,14 @@ Download the latest JAR or grab via Maven:
 <dependency>
   <groupId>wo.lf</groupId>
   <artifactId>rx-lifx</artifactId>
-  <version>0.0.5</version>
+  <version>0.0.10</version>
 </dependency>
 ```
 
 or Gradle:
 
 ```
-implementation 'wo.lf:rx-lifx:0.0.5'
+implementation 'wo.lf:rx-lifx:0.0.10'
 ```
 
 using jCenter()
@@ -60,4 +60,44 @@ lightSource.stop()
 use commands in wo.lf.lifx.api to change and query lights
 ```kotlin
 LightSetPowerCommand.create(light, true, 1000).fireAndForget()
+```
+
+# Tracking Location / Group ownership
+
+If you don't want to track location / group data yourself, wrap the change listener in an instance of LocationGroupManager
+to intercept all updates
+
+```kotlin
+val groupLocationChangeListener = object : IGroupLocationChangeListener {
+   override fun locationAdded(newLocation: Location) {}
+   override fun groupAdded(location: Location, group: Group) {}
+   override fun locationGroupChanged(location: Location, group: Group, light: Light) {}
+   override fun groupRemoved(location: Location, group: Group) {}
+   override fun locationRemoved(location: Location) {}
+}
+
+val locationGroupManager = LocationGroupManager(changeListener, groupLocationChangeListener)
+val lightSource = LightService(UdpTransport, locationGroupManager)
+```
+
+Afterwards you can either received events through the implementation of IGroupLocationChangeListener, query locations through:
+
+```kotlin
+locationGroupManager.locations // list of all known Location instances
+
+val location = locationGroupManager.locations.first()
+location.name // name of the location with the newest timestamp
+location.lights // all lights in the location
+location.groups // list of all Group instances in a location
+
+val group = location.groups.first()
+val group.name // name of the group
+val group.lights // all lights in this group
+
+```
+
+or query Location and Group for a Light
+
+```kotlin
+val (location, group) = locationGroupManager.getLocationGroup(light)
 ```
