@@ -40,7 +40,7 @@ class LocationGroupManagerTest : Spek({
 
             it("creates one location with default id") {
                 assertEquals(1, manager.locations.size)
-                assertEquals(Light.defaultLocation.location, manager.locations.first().id)
+                assertEquals(Light.defaultLocation.id, manager.locations.first().id)
                 assertEquals("", manager.locations.first().name)
                 assertEquals(1, manager.locations.first().lights.size)
                 assertEquals(light, manager.locations.first().lights.first())
@@ -48,7 +48,7 @@ class LocationGroupManagerTest : Spek({
 
             it("creates one group with default id inside location") {
                 assertEquals(1, manager.locations.first().groups.size)
-                assertEquals(Light.defaultGroup.group, manager.locations.first().groups.first().id)
+                assertEquals(Light.defaultGroup.id, manager.locations.first().groups.first().id)
                 assertEquals("", manager.locations.first().groups.first().name)
                 assertEquals(1, manager.locations.first().groups.first().lights.size)
                 assertEquals(light, manager.locations.first().groups.first().lights.first())
@@ -95,7 +95,7 @@ class LocationGroupManagerTest : Spek({
 
             it("creates one location with default id") {
                 assertEquals(1, manager.locations.size)
-                assertEquals(locationId, manager.locations.first().id)
+                assertEquals(locationId.getGuidFromByteArray(), manager.locations.first().id)
                 assertEquals("Location Light 2", manager.locations.first().name)
                 assertEquals(1, manager.locations.first().lights.size)
                 assertEquals(light, manager.locations.first().lights.first())
@@ -103,7 +103,7 @@ class LocationGroupManagerTest : Spek({
 
             it("creates one group with default id inside location") {
                 assertEquals(1, manager.locations.first().groups.size)
-                assertEquals(groupId, manager.locations.first().groups.first().id)
+                assertEquals(groupId.getGuidFromByteArray(), manager.locations.first().groups.first().id)
                 assertEquals("Group Light 2", manager.locations.first().groups.first().name)
                 assertEquals(1, manager.locations.first().groups.first().lights.size)
                 assertEquals(light, manager.locations.first().groups.first().lights.first())
@@ -138,7 +138,7 @@ class LocationGroupManagerTest : Spek({
 
             it("should only have 1 location") {
                 assertEquals(1, manager.locations.size)
-                assertEquals(locationId, manager.locations.first().id)
+                assertEquals(locationId.getGuidFromByteArray(), manager.locations.first().id)
             }
 
             it("location should contain light") {

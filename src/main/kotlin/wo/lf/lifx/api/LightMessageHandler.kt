@@ -14,7 +14,7 @@ object LightMessageHandler : ILightMessageHandler {
             when (payload) {
                 is LightState -> {
                     update(LightChangeSource.Device, LightProperty.Label) {
-                        label = String(payload.label).trimNullbytes()
+                        label = String(payload.label).trimNullBytes()
                     }
                     update(LightChangeSource.Device, LightProperty.Color) {
                         color = payload.color
@@ -99,7 +99,7 @@ object LightMessageHandler : ILightMessageHandler {
                 }
                 is StateLabel -> {
                     update(LightChangeSource.Device, LightProperty.Label) {
-                        label = String(payload.label).trimNullbytes()
+                        label = String(payload.label).trimNullBytes()
                     }
                 }
                 is StateService, is StateWifiInfo, is StateHostInfo, is EchoResponse -> {

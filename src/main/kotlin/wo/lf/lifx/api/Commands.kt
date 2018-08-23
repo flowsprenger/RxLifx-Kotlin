@@ -87,7 +87,7 @@ object DeviceSetLabelCommand {
         val sanitizedLabel = label.maxLengthPadNull(32)
         return light.send(SetLabel(sanitizedLabel.toByteArray()), ackRequired, responseRequired) {
             light.update(LightChangeSource.Client, LightProperty.Label) {
-                light.label = sanitizedLabel.trimNullbytes()
+                light.label = sanitizedLabel.trimNullBytes()
             }
         }
     }

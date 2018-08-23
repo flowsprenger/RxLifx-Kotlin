@@ -105,11 +105,11 @@ sealed class LifxEntity {
     abstract val lights: List<Light>
 }
 
-class Location(val id: Array<Byte>) : LifxEntity() {
+class Location(val id: String) : LifxEntity() {
 
-    override val entityId: Int by lazy { Arrays.hashCode(id) }
+    override val entityId: Int by lazy { id.hashCode() }
 
-    internal val groupsById: MutableMap<Array<Byte>, Group> = mutableMapOf()
+    internal val groupsById: MutableMap<String, Group> = mutableMapOf()
 
     val groups: List<Group>
         get() = groupsById.values.toList()
@@ -127,8 +127,8 @@ class Location(val id: Array<Byte>) : LifxEntity() {
         }.name
 }
 
-class Group(val id: Array<Byte>) : LifxEntity() {
-    override val entityId: Int by lazy { Arrays.hashCode(id) }
+class Group(val id: String) : LifxEntity() {
+    override val entityId: Int by lazy { id.hashCode() }
 
     override var lights: List<Light> = listOf()
         internal set
@@ -290,7 +290,7 @@ internal inline fun Light.updateZone(source: LightChangeSource, property: LightP
     }
 }
 
-internal fun String.trimNullbytes(): String {
+internal fun String.trimNullBytes(): String {
     val nullBytePosition = this.indexOf('\u0000')
     return if (nullBytePosition != -1) {
         substring(0, nullBytePosition)
@@ -300,9 +300,9 @@ internal fun String.trimNullbytes(): String {
 }
 
 val StateGroup.name
-    get() = String(label).trimNullbytes()
+    get() = String(label).trimNullBytes()
 
 val StateLocation.name
-    get() = String(label).trimNullbytes()
+    get() = String(label).trimNullBytes()
 
 data class Zones(val count: Int, val colors: List<HSBK>)

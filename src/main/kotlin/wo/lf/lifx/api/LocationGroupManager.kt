@@ -14,13 +14,13 @@ interface IGroupLocationChangeListener {
 
 class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDispatcher, private val groupLocationChangeListener: IGroupLocationChangeListener) : ILightsChangeDispatcher {
 
-    private val locationsById: MutableMap<Array<Byte>, Location> = mutableMapOf()
+    private val locationsById: MutableMap<String, Location> = mutableMapOf()
 
     val locations: List<Location>
         get() = locationsById.values.toList()
 
     override fun onLightAdded(light: Light) {
-        if (locationsById[light.location.location]?.groupsById?.get(light.group.group)?.lights?.contains(light) == true) {
+        if (locationsById[light.location.id]?.groupsById?.get(light.group.id)?.lights?.contains(light) == true) {
             return
         }
         addToLocationAndGroup(light)
@@ -31,13 +31,13 @@ class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDis
         synchronized(this) {
             var newLocation = false
             var newGroup = false
-            val location = locationsById.getOrPut(light.location.location) {
+            val location = locationsById.getOrPut(light.location.id) {
                 newLocation = true
-                Location(light.location.location)
+                Location(light.location.id)
             }
-            val group = location.groupsById.getOrPut(light.group.group) {
+            val group = location.groupsById.getOrPut(light.group.id) {
                 newGroup = true
-                Group(light.group.group)
+                Group(light.group.id)
             }
             group.lights = group.lights.plus(light)
             if (newLocation) {
@@ -61,10 +61,10 @@ class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDis
     private fun changeLocation(light: Light, oldLocation: StateLocation, newLocation: StateLocation) {
         synchronized(this) {
             if (oldLocation.location.contentEquals(newLocation.location)) {
-                val (location, group) = getLocationGroup(newLocation.location, light.group.group)
+                val (location, group) = getLocationGroup(newLocation.id, light.group.id)
                 groupLocationChangeListener.locationGroupChanged(location, group, light)
             } else {
-                val (location, group) = getLocationGroup(oldLocation.location, light.group.group)
+                val (location, group) = getLocationGroup(oldLocation.id, light.group.id)
                 group.lights -= light
                 if (group.lights.isEmpty()) {
                     location.groupsById.remove(group.id)
@@ -82,10 +82,10 @@ class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDis
     private fun changeGroup(light: Light, oldGroup: StateGroup, newGroup: StateGroup) {
         synchronized(this) {
             if (oldGroup.group.contentEquals(newGroup.group)) {
-                val (location, group) = getLocationGroup(light.location.location, newGroup.group)
+                val (location, group) = getLocationGroup(light.location.id, newGroup.id)
                 groupLocationChangeListener.locationGroupChanged(location, group, light)
             } else {
-                val (location, group) = getLocationGroup(light.location.location, oldGroup.group)
+                val (location, group) = getLocationGroup(light.location.id, oldGroup.id)
                 group.lights -= light
                 if (group.lights.isEmpty()) {
                     location.groupsById.remove(group.id)
@@ -96,7 +96,7 @@ class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDis
         }
     }
 
-    private fun getLocationGroup(location: Array<Byte>, group: Array<Byte>): Pair<Location, Group> {
+    private fun getLocationGroup(location: String, group: String): Pair<Location, Group> {
         locationsById[location]?.let { location ->
             location.groupsById[group]?.let { group ->
                 return Pair(location, group)
@@ -107,8 +107,22 @@ class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDis
     }
 
     fun getLocationGroup(light: Light): Pair<Location, Group> {
-        return getLocationGroup(light.location.location, light.group.group)
+        return getLocationGroup(light.location.id, light.group.id)
     }
+}
+
+val StateGroup.id
+    get() = group.getGuidFromByteArray()
+
+val StateLocation.id
+    get() = location.getGuidFromByteArray()
+
+fun Array<Byte>.getGuidFromByteArray(): String {
+    val buffer = StringBuilder()
+    for (i in indices) {
+        buffer.append(String.format("%02x", this[i]))
+    }
+    return buffer.toString()
 }
 
 
