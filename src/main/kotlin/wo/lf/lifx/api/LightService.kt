@@ -31,13 +31,14 @@ import wo.lf.lifx.extensions.fireAndForget
 import wo.lf.lifx.net.SourcedLifxMessage
 import wo.lf.lifx.net.TargetedLifxMessage
 import wo.lf.lifx.net.TransportFactory
+import wo.lf.lifx.net.UdpTransport
 import java.util.concurrent.TimeUnit
 
 interface ILightFactory {
     fun create(id: Long, source: ILightSource<LifxMessage<LifxMessagePayload>>, changeDispatcher: ILightsChangeDispatcher): Light
 }
 
-object DefaultLightFactory: ILightFactory {
+object DefaultLightFactory : ILightFactory {
     override fun create(id: Long, source: ILightSource<LifxMessage<LifxMessagePayload>>, changeDispatcher: ILightsChangeDispatcher): Light {
         return Light(id, source, changeDispatcher)
     }
@@ -51,7 +52,31 @@ interface ILightSource<T> {
     val ioScheduler: Scheduler
 }
 
-class LightService(transportFactory: TransportFactory, private val changeDispatcher: ILightsChangeDispatcher, private val lightFactory: ILightFactory = DefaultLightFactory, override val ioScheduler: Scheduler = Schedulers.io(), observeScheduler: Scheduler = Schedulers.single()) : ILightSource<LifxMessage<LifxMessagePayload>> {
+interface ILightServiceExtensionFactory<T> {
+    fun create(changeDispatcher: ILightsChangeDispatcher): ILightServiceExtension<T>
+}
+
+interface ILightServiceExtension<T> : ILightsChangeDispatcher {
+    fun start(source: ILightSource<T>)
+    fun stop()
+}
+
+class LightService(
+        clientChangeDispatcher: ILightsChangeDispatcher,
+        transportFactory: TransportFactory = UdpTransport,
+        private val lightFactory: ILightFactory = DefaultLightFactory,
+        override val ioScheduler: Scheduler = Schedulers.io(),
+        observeScheduler: Scheduler = Schedulers.single(),
+        extensionFactories: List<ILightServiceExtensionFactory<LifxMessage<LifxMessagePayload>>> = listOf()
+) : ILightSource<LifxMessage<LifxMessagePayload>> {
+
+    private val dispatcherAndExtensions: Pair<ILightsChangeDispatcher, List<ILightServiceExtension<LifxMessage<LifxMessagePayload>>>> = extensionFactories.fold(Pair(clientChangeDispatcher, listOf())) { (dispatcher, extensions), extensionFactory ->
+        val extension = extensionFactory.create(dispatcher)
+        Pair(extension, extensions + extension)
+    }
+
+    private val changeDispatcher = dispatcherAndExtensions.first
+    private val extensions = dispatcherAndExtensions.second
 
     private val transport = transportFactory.create(0, LifxMessageParserImpl())
     private val legacyTransport = transportFactory.create(Lifx.defaultPort, LifxMessageParserImpl())
@@ -66,8 +91,8 @@ class LightService(transportFactory: TransportFactory, private val changeDispatc
         return transport.send(message)
     }
 
-    fun start(){
-        disposables.add(messages.groupBy { it.message.header.target }.subscribe{ lightMessages ->
+    fun start() {
+        disposables.add(messages.groupBy { it.message.header.target }.subscribe { lightMessages ->
             lightFactory.create(lightMessages.key!!, this@LightService, changeDispatcher).apply {
                 changeDispatcher.onLightAdded(this)
                 disposables.add(attach(lightMessages))
@@ -79,9 +104,12 @@ class LightService(transportFactory: TransportFactory, private val changeDispatc
         })
 
         BroadcastGetServiceCommand.create(this).fireAndForget()
+
+        extensions.forEach { it.start(this) }
     }
 
-    fun stop(){
+    fun stop() {
+        extensions.forEach { it.stop() }
         disposables.clear()
     }
 

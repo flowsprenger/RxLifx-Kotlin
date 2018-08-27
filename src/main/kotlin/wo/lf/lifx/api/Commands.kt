@@ -233,6 +233,18 @@ object MultiZoneGetColorZonesCommand {
     }
 }
 
+object TileGetDeviceChainCommand {
+    fun create(light: Light, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateMultiZone> {
+        return light.send(GetDeviceChain(), ackRequired, responseRequired)
+    }
+}
+
+object TileGetTileState64Command {
+    fun create(light: Light, startIndex: Int = 0, endIndex: Int = 255, x: Int = 0, y: Int = 0, width: Int = 8, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateMultiZone> {
+        return light.send(GetTileState64(startIndex.toByte(), endIndex.toByte(), 0, x.toByte(), y.toByte(), width.toByte()), ackRequired, responseRequired)
+    }
+}
+
 
 object LightSetBrightness {
     fun create(light: Light, brightness: Short, duration: Int, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<LightState> {

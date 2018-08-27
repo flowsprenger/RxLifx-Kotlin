@@ -71,6 +71,7 @@ data class ProductInfo(val vendorId: Int, val productId: Int, val version: Int) 
 
         val productsSupportingMultiZone = listOf(0, 31, 32, 38)
         val productsSupportingInfrared = listOf(0, 29, 30, 45, 46)
+        val productsSupportingTile = listOf(55)
     }
 
     val hasMultiZoneSupport: Boolean
@@ -81,6 +82,10 @@ data class ProductInfo(val vendorId: Int, val productId: Int, val version: Int) 
     val hasInfraredSupport: Boolean
         get() {
             return productsSupportingInfrared.contains(productId)
+        }
+    val hasTileSupport: Boolean
+        get() {
+            return productsSupportingTile.contains(productId)
         }
 }
 
