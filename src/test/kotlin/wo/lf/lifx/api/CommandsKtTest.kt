@@ -25,7 +25,7 @@ class CommandsKtTest : Spek({
 
         beforeEachTest {
             scheduler = TestScheduler()
-            lightSource = TestLightSource(scheduler)
+            lightSource = TestLightSource(scheduler, scheduler)
             light = Light(15, lightSource, TestLightChangeDispatcher())
             sendInvocationCount = 0
 
@@ -62,7 +62,7 @@ open class TestLightChangeDispatcher : ILightChangeDispatcher {
     }
 }
 
-class TestLightSource(override val ioScheduler: Scheduler) : ILightSource<LifxMessage<LifxMessagePayload>> {
+class TestLightSource(override val ioScheduler: Scheduler, override val observeScheduler: Scheduler) : ILightSource<LifxMessage<LifxMessagePayload>> {
     var sendImpl: ((TargetedLifxMessage<LifxMessage<LifxMessagePayload>>) -> Boolean)? = null
     override fun send(message: TargetedLifxMessage<LifxMessage<LifxMessagePayload>>): Boolean {
         return sendImpl?.invoke(message) ?: true

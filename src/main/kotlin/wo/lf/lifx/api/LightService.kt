@@ -50,6 +50,7 @@ interface ILightSource<T> {
     val sourceId: Int
     val messages: Flowable<SourcedLifxMessage<T>>
     val ioScheduler: Scheduler
+    val observeScheduler: Scheduler
 }
 
 interface ILightServiceExtensionFactory<T> {
@@ -66,7 +67,7 @@ class LightService(
         transportFactory: TransportFactory = UdpTransport,
         private val lightFactory: ILightFactory = DefaultLightFactory,
         override val ioScheduler: Scheduler = Schedulers.io(),
-        observeScheduler: Scheduler = Schedulers.single(),
+        override val observeScheduler: Scheduler = Schedulers.single(),
         extensionFactories: List<ILightServiceExtensionFactory<LifxMessage<LifxMessagePayload>>> = listOf()
 ) : ILightSource<LifxMessage<LifxMessagePayload>> {
 

@@ -17,7 +17,7 @@ class LocationGroupManagerTest : Spek({
 
     beforeEachTest {
         scheduler = TestScheduler()
-        lightSource = TestLightSource(scheduler)
+        lightSource = TestLightSource(scheduler, scheduler)
     }
 
     fun createTestLight(id: Long): Light {
