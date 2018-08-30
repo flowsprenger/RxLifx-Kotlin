@@ -33,6 +33,7 @@ import wo.lf.lifx.net.TargetedLifxMessage
 import wo.lf.lifx.net.TransportFactory
 import wo.lf.lifx.net.UdpTransport
 import java.util.concurrent.TimeUnit
+import kotlin.reflect.KClass
 
 interface ILightFactory {
     fun create(id: Long, source: ILightSource<LifxMessage<LifxMessagePayload>>, changeDispatcher: ILightsChangeDispatcher): Light
@@ -112,6 +113,10 @@ class LightService(
     fun stop() {
         extensions.forEach { it.stop() }
         disposables.clear()
+    }
+
+    fun extensionOf(type: KClass<*>): ILightServiceExtension<LifxMessage<LifxMessagePayload>>? {
+        return extensions.firstOrNull { type.isInstance(it) }
     }
 
     companion object {

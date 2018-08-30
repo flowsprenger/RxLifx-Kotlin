@@ -1,3 +1,23 @@
+/*
+
+Copyright 2018 Florian Sprenger
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/
+
+
 package wo.lf.lifx.api
 
 import io.reactivex.disposables.CompositeDisposable
@@ -12,6 +32,11 @@ data class TileDevice(
         val colors: List<HSBK>
 )
 
+interface ITileManagerListener {
+    fun tileAdded(tile: TileLight)
+    fun tileUpdated(tile: TileLight, chain: List<TileDevice>)
+}
+
 data class TileLight(
         val light: Light
 ) {
@@ -21,6 +46,8 @@ data class TileLight(
 class TileManager(
         private val wrappedChangeDispatcher: ILightsChangeDispatcher
 ) : ILightServiceExtension<LifxMessage<LifxMessagePayload>>, ILightsChangeDispatcher {
+
+    private var listeners: Set<ITileManagerListener> = setOf()
 
     private val disposables = CompositeDisposable()
 
@@ -85,6 +112,7 @@ class TileManager(
                         tile.chain = devices
                         if (tileChanged) {
                             // dispatch change
+                            listeners.forEach { it.tileUpdated(tile, tile.chain) }
                         }
                     }
                 }
@@ -98,7 +126,7 @@ class TileManager(
 
                             if (column >= payload.x && column < payload.x + payload.width) {
                                 if (row >= payload.y && row < payload.y + 64 / payload.width) {
-                                    val messageIndex = (column - payload.x) * payload.width + (row - payload.y)
+                                    val messageIndex = payload.width * (row - payload.y) + (column - payload.x)
                                     payload.colors[messageIndex]
                                 } else {
                                     hsbk
@@ -114,6 +142,20 @@ class TileManager(
                                 tileDevice
                             }
                         }
+
+                        // 360 -> (Short.MAX_VALUE.toInt() * 2)
+                        // 0 -> 0
+
+                        // x -> f    x * (Short.MAX_VALUE.toInt() * 2) / 360
+                        val ncolors = List(64) { HSBK((it * (Short.MAX_VALUE.toInt() * 2) / 64).toShort(), (Short.MAX_VALUE.toInt() * 2).toShort(), Short.MAX_VALUE, 0) }
+                        TileSetTileState64Command.create(
+                                tileManager = this,
+                                light = tile.light,
+                                tileIndex = payload.tile_index.toInt(),
+                                colors = ncolors
+                        ).fireAndForget()
+
+                        listeners.forEach { it.tileUpdated(tile, listOf(device)) }
                     }
                 }
             }
@@ -134,10 +176,12 @@ class TileManager(
 
     private fun trackTile(light: Light) {
         if (!tiles.containsKey(light.id)) {
-            tiles[light.id] = TileLight(light)
+            val tile = TileLight(light)
+            tiles[light.id] = tile
             TileGetDeviceChainCommand.create(light).fireAndForget()
             TileGetTileState64Command.create(light).fireAndForget()
             // dispatch tile added
+            listeners.forEach { it.tileAdded(tile) }
         }
     }
 
@@ -146,6 +190,14 @@ class TileManager(
             trackTile(light)
         }
         wrappedChangeDispatcher.onLightChange(light, property, oldValue, newValue)
+    }
+
+    fun addListener(listener: ITileManagerListener) {
+        listeners = listeners.plus(listener)
+    }
+
+    fun removeListener(listener: ITileManagerListener) {
+        listeners = listeners.minus(listener)
     }
 
     companion object : ILightServiceExtensionFactory<LifxMessage<LifxMessagePayload>> {
