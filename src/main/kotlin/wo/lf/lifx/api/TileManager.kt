@@ -53,21 +53,24 @@ class TileManager(
 
     private val disposables = CompositeDisposable()
 
-    private val tiles: MutableMap<Long, TileLight> = mutableMapOf()
+    private val tilesById: MutableMap<Long, TileLight> = mutableMapOf()
+
+    val tiles: List<TileLight>
+        get() = tilesById.values.toList()
 
     override fun start(source: ILightSource<LifxMessage<LifxMessagePayload>>) {
         disposables.add(source.tick.subscribe {
-            tiles.forEach { (id, tile) ->
+            tilesById.forEach { (id, tile) ->
                 TileGetTileState64Command.create(tile.light).fireAndForget()
             }
         })
 
-        disposables.add(source.messages.filter { tiles.containsKey(it.message.header.target) }.observeOn(source.observeScheduler).subscribe { message ->
+        disposables.add(source.messages.filter { tilesById.containsKey(it.message.header.target) }.observeOn(source.observeScheduler).subscribe { message ->
             val payload = message.message.payload
             when (payload) {
                 is StateDeviceChain -> {
                     var tileChanged = false
-                    val tile = tiles[message.message.header.target]
+                    val tile = tilesById[message.message.header.target]
                     if (tile != null) {
                         val devices = (0 until payload.total_count).map { index ->
                             val messageIndex = index - payload.start_index
@@ -122,7 +125,7 @@ class TileManager(
                     }
                 }
                 is StateTileState64 -> {
-                    val tile = tiles[message.message.header.target]
+                    val tile = tilesById[message.message.header.target]
                     if (tile != null && tile.chain.size > payload.tile_index) {
                         val device = tile.chain[payload.tile_index.toInt()]
                         var colorsChanged = false
@@ -147,7 +150,7 @@ class TileManager(
     }
 
     override fun stop() {
-        // do we also need to reset tiles?
+        // do we also need to reset tilesById?
         disposables.clear()
     }
 
@@ -159,9 +162,9 @@ class TileManager(
     }
 
     private fun trackTile(light: Light) {
-        if (!tiles.containsKey(light.id)) {
+        if (!tilesById.containsKey(light.id)) {
             val tile = TileLight(light)
-            tiles[light.id] = tile
+            tilesById[light.id] = tile
             TileGetDeviceChainCommand.create(light).fireAndForget()
             TileGetTileState64Command.create(light).fireAndForget()
             // dispatch tile added
