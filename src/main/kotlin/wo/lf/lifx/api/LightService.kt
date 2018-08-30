@@ -115,8 +115,8 @@ class LightService(
         disposables.clear()
     }
 
-    fun extensionOf(type: KClass<*>): ILightServiceExtension<LifxMessage<LifxMessagePayload>>? {
-        return extensions.firstOrNull { type.isInstance(it) }
+    fun <T : Any> extensionOf(type: KClass<T>): T? {
+        return extensions.firstOrNull { type.isInstance(it) } as? T
     }
 
     companion object {

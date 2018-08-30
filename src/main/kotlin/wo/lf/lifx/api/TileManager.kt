@@ -24,17 +24,19 @@ import io.reactivex.disposables.CompositeDisposable
 import wo.lf.lifx.domain.*
 import wo.lf.lifx.extensions.fireAndForget
 
-data class TileDevice(
-        val user_x: Float,
-        val user_y: Float,
-        val width: Byte,
-        val height: Byte,
-        val colors: List<HSBK>
+class TileDevice(
+        val index: Int,
+        var user_x: Float,
+        var user_y: Float,
+        var width: Byte,
+        var height: Byte,
+        val colors: Array<HSBK>
 )
 
 interface ITileManagerListener {
     fun tileAdded(tile: TileLight)
-    fun tileUpdated(tile: TileLight, chain: List<TileDevice>)
+    fun chainUpdated(tile: TileLight)
+    fun deviceUpdated(tile: TileLight, device: TileDevice)
 }
 
 data class TileLight(
@@ -79,40 +81,43 @@ class TileManager(
                                             || existingDevice.height != device.height) {
 
                                         tileChanged = true
-                                        existingDevice.copy(
-                                                user_x = device.user_x,
-                                                user_y = device.user_y,
-                                                width = device.width,
-                                                height = device.height
-                                        )
+                                        existingDevice.apply {
+                                            user_x = device.user_x
+                                            user_y = device.user_y
+                                            width = device.width
+                                            height = device.height
+                                        }
                                     } else {
                                         existingDevice
                                     }
                                 } else {
                                     tileChanged = true
                                     TileDevice(
+                                            index = index,
                                             user_x = device.user_x,
                                             user_y = device.user_y,
                                             width = device.width,
                                             height = device.height,
-                                            colors = List(device.width * device.height) { Lifx.defaultColor }
+                                            colors = Array(device.width * device.height) { Lifx.defaultColor }
                                     )
                                 }
                             } else {
                                 tileChanged = true
                                 tile.chain.getOrNull(index) ?: TileDevice(
+                                        index = index,
                                         user_x = 0f,
                                         user_y = 0f,
                                         width = 0,
                                         height = 0,
-                                        colors = listOf()
+                                        colors = arrayOf()
                                 )
                             }
                         }
-                        tile.chain = devices
+
                         if (tileChanged) {
+                            tile.chain = devices
                             // dispatch change
-                            listeners.forEach { it.tileUpdated(tile, tile.chain) }
+                            listeners.forEach { it.chainUpdated(tile) }
                         }
                     }
                 }
@@ -120,42 +125,21 @@ class TileManager(
                     val tile = tiles[message.message.header.target]
                     if (tile != null && tile.chain.size > payload.tile_index) {
                         val device = tile.chain[payload.tile_index.toInt()]
-                        val colors = device.colors.mapIndexed { index, hsbk ->
-                            val column = index % device.width
-                            val row = index / device.height
-
-                            if (column >= payload.x && column < payload.x + payload.width) {
-                                if (row >= payload.y && row < payload.y + 64 / payload.width) {
-                                    val messageIndex = payload.width * (row - payload.y) + (column - payload.x)
-                                    payload.colors[messageIndex]
-                                } else {
-                                    hsbk
+                        var colorsChanged = false
+                        for (x in payload.x until Math.min(8, payload.x + payload.width)) {
+                            for (y in payload.y until Math.min(8, payload.y + 84 / payload.width)) {
+                                val existingColor = device.colors[y * 8 + x]
+                                val newColor = payload.colors[(y - payload.y) * payload.width + x - payload.x]
+                                if (existingColor != newColor) {
+                                    device.colors[y * 8 + x] = newColor
+                                    colorsChanged = true
                                 }
-                            } else {
-                                hsbk
-                            }
-                        }
-                        tile.chain = tile.chain.mapIndexed { index, tileDevice ->
-                            if (index == payload.tile_index.toInt()) {
-                                tileDevice.copy(colors = colors)
-                            } else {
-                                tileDevice
                             }
                         }
 
-                        // 360 -> (Short.MAX_VALUE.toInt() * 2)
-                        // 0 -> 0
-
-                        // x -> f    x * (Short.MAX_VALUE.toInt() * 2) / 360
-                        val ncolors = List(64) { HSBK((it * (Short.MAX_VALUE.toInt() * 2) / 64).toShort(), (Short.MAX_VALUE.toInt() * 2).toShort(), Short.MAX_VALUE, 0) }
-                        TileSetTileState64Command.create(
-                                tileManager = this,
-                                light = tile.light,
-                                tileIndex = payload.tile_index.toInt(),
-                                colors = ncolors
-                        ).fireAndForget()
-
-                        listeners.forEach { it.tileUpdated(tile, listOf(device)) }
+                        if (colorsChanged) {
+                            listeners.forEach { it.deviceUpdated(tile, device) }
+                        }
                     }
                 }
             }
