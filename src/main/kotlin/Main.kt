@@ -12,7 +12,7 @@ fun main(args: Array<String>) {
         override fun onLightChange(light: Light, property: LightProperty, oldValue: Any?, newValue: Any?) {
             println("light ${light.id} changed $property from $oldValue to $newValue")
         }
-    }, extensionFactories = listOf(TileManager)).apply { start() }
+    }, extensionFactories = listOf(TileManager, LocationGroupManager)).apply { start() }
 
     lightSource.extensionOf(TileManager::class)?.let { tileManager ->
         tileManager.addListener(object : ITileManagerListener {
@@ -48,6 +48,32 @@ fun main(args: Array<String>) {
             }
 
         })
+    }
+
+    lightSource.extensionOf(LocationGroupManager::class)?.let { locationGroupManager ->
+        locationGroupManager.addListener(object : IGroupLocationChangeListener {
+            override fun locationAdded(newLocation: Location) {
+                println("location added ${newLocation.name}")
+            }
+
+            override fun groupAdded(location: Location, group: Group) {
+                println("group added ${group.name}")
+            }
+
+            override fun locationGroupChanged(location: Location, group: Group, light: Light) {
+                println("location group added ${location.name} ${group.name} ${light.label}")
+            }
+
+            override fun groupRemoved(location: Location, group: Group) {
+                println("group removed ${group.name}")
+            }
+
+            override fun locationRemoved(location: Location) {
+                println("location removed ${location.name}")
+            }
+
+        })
+
     }
 
     while (true) {

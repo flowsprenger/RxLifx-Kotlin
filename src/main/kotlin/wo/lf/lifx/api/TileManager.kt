@@ -154,7 +154,7 @@ class TileManager(
     }
 
     override fun stop() {
-        // do we also need to reset tilesById?
+        tilesById.clear()
         disposables.clear()
     }
 

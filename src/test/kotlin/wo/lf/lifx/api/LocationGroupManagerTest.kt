@@ -30,7 +30,9 @@ class LocationGroupManagerTest : Spek({
 
         beforeEachTest {
             groupLocationChangeListener = TestGroupLocationChangeListener()
-            manager = LocationGroupManager(TestLightsChangeDispatcher(), groupLocationChangeListener)
+            manager = LocationGroupManager(TestLightsChangeDispatcher()).apply {
+                addListener(groupLocationChangeListener)
+            }
         }
 
         on("light added with default location and group") {

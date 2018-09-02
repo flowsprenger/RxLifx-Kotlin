@@ -1,5 +1,25 @@
+/*
+
+Copyright 2018 Florian Sprenger
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/
+
 package wo.lf.lifx.api
 
+import wo.lf.lifx.domain.LifxMessagePayload
 import wo.lf.lifx.domain.StateGroup
 import wo.lf.lifx.domain.StateLocation
 
@@ -12,12 +32,23 @@ interface IGroupLocationChangeListener {
 
 }
 
-class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDispatcher, private val groupLocationChangeListener: IGroupLocationChangeListener) : ILightsChangeDispatcher {
+class LocationGroupManager(
+        private val wrappedChangeDispatcher: ILightsChangeDispatcher
+) : ILightServiceExtension<LifxMessage<LifxMessagePayload>>, ILightsChangeDispatcher {
+
+    private var listeners: Set<IGroupLocationChangeListener> = setOf()
 
     private val locationsById: MutableMap<String, Location> = mutableMapOf()
 
     val locations: List<Location>
         get() = locationsById.values.toList()
+
+    override fun start(source: ILightSource<LifxMessage<LifxMessagePayload>>) {
+    }
+
+    override fun stop() {
+        locationsById.clear()
+    }
 
     override fun onLightAdded(light: Light) {
         if (locationsById[light.location.id]?.groupsById?.get(light.group.id)?.lights?.contains(light) == true) {
@@ -41,12 +72,12 @@ class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDis
             }
             group.lights = group.lights.plus(light)
             if (newLocation) {
-                groupLocationChangeListener.locationAdded(location)
+                listeners.forEach { it.locationAdded(location) }
             }
             if (newGroup) {
-                groupLocationChangeListener.groupAdded(location, group)
+                listeners.forEach { it.groupAdded(location, group) }
             }
-            groupLocationChangeListener.locationGroupChanged(location, group, light)
+            listeners.forEach { it.locationGroupChanged(location, group, light) }
         }
     }
 
@@ -62,17 +93,17 @@ class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDis
         synchronized(this) {
             if (oldLocation.location.contentEquals(newLocation.location)) {
                 val (location, group) = getLocationGroup(newLocation.id, light.group.id)
-                groupLocationChangeListener.locationGroupChanged(location, group, light)
+                listeners.forEach { it.locationGroupChanged(location, group, light) }
             } else {
                 val (location, group) = getLocationGroup(oldLocation.id, light.group.id)
                 group.lights -= light
                 if (group.lights.isEmpty()) {
                     location.groupsById.remove(group.id)
-                    groupLocationChangeListener.groupRemoved(location, group)
+                    listeners.forEach { it.groupRemoved(location, group) }
                 }
                 if (location.groups.isEmpty()) {
                     locationsById.remove(location.id)
-                    groupLocationChangeListener.locationRemoved(location)
+                    listeners.forEach { it.locationRemoved(location) }
                 }
                 addToLocationAndGroup(light)
             }
@@ -83,13 +114,13 @@ class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDis
         synchronized(this) {
             if (oldGroup.group.contentEquals(newGroup.group)) {
                 val (location, group) = getLocationGroup(light.location.id, newGroup.id)
-                groupLocationChangeListener.locationGroupChanged(location, group, light)
+                listeners.forEach { it.locationGroupChanged(location, group, light) }
             } else {
                 val (location, group) = getLocationGroup(light.location.id, oldGroup.id)
                 group.lights -= light
                 if (group.lights.isEmpty()) {
                     location.groupsById.remove(group.id)
-                    groupLocationChangeListener.groupRemoved(location, group)
+                    listeners.forEach { it.groupRemoved(location, group) }
                 }
                 addToLocationAndGroup(light)
             }
@@ -108,6 +139,20 @@ class LocationGroupManager(private val wrappedChangeDispatcher: ILightsChangeDis
 
     fun getLocationGroup(light: Light): Pair<Location, Group> {
         return getLocationGroup(light.location.id, light.group.id)
+    }
+
+    fun addListener(listener: IGroupLocationChangeListener) {
+        listeners = listeners.plus(listener)
+    }
+
+    fun removeListener(listener: IGroupLocationChangeListener) {
+        listeners = listeners.minus(listener)
+    }
+
+    companion object : ILightServiceExtensionFactory<LifxMessage<LifxMessagePayload>> {
+        override fun create(changeDispatcher: ILightsChangeDispatcher): ILightServiceExtension<LifxMessage<LifxMessagePayload>> {
+            return LocationGroupManager(changeDispatcher)
+        }
     }
 }
 
