@@ -128,25 +128,29 @@ class TileManager(
                     val tile = tilesById[message.message.header.target]
                     if (tile != null && tile.chain.size > payload.tile_index) {
                         val device = tile.chain[payload.tile_index.toInt()]
-                        var colorsChanged = false
-                        for (x in payload.x until Math.min(8, payload.x + payload.width)) {
-                            for (y in payload.y until Math.min(8, payload.y + 84 / payload.width)) {
-                                val existingColor = device.colors[y * 8 + x]
-                                val newColor = payload.colors[(y - payload.y) * payload.width + x - payload.x]
-                                if (existingColor != newColor) {
-                                    device.colors[y * 8 + x] = newColor
-                                    colorsChanged = true
-                                }
-                            }
-                        }
-
-                        if (colorsChanged) {
-                            listeners.forEach { it.deviceUpdated(tile, device) }
-                        }
+                        updateTile(tile, device, payload.x.toInt(), payload.y.toInt(), payload.width.toInt(), payload.colors)
                     }
                 }
             }
         })
+    }
+
+    internal fun updateTile(tile: TileLight, device: TileDevice, setX: Int, setY: Int, width: Int, colors: Array<HSBK>) {
+        var colorsChanged = false
+        for (x in setX until Math.min(8, setX + width)) {
+            for (y in setY until Math.min(8, setY + 64 / width)) {
+                val existingColor = device.colors[y * 8 + x]
+                val newColor = colors[(y - setY) * width + x - setX]
+                if (existingColor != newColor) {
+                    device.colors[y * 8 + x] = newColor
+                    colorsChanged = true
+                }
+            }
+        }
+
+        if (colorsChanged) {
+            listeners.forEach { it.deviceUpdated(tile, device) }
+        }
     }
 
     override fun stop() {
