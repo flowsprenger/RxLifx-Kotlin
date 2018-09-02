@@ -12,9 +12,9 @@ fun main(args: Array<String>) {
         override fun onLightChange(light: Light, property: LightProperty, oldValue: Any?, newValue: Any?) {
             println("light ${light.id} changed $property from $oldValue to $newValue")
         }
-    }, extensionFactories = listOf(TileManager, LocationGroupManager)).apply { start() }
+    }, extensionFactories = listOf(TileService, LocationGroupService)).apply { start() }
 
-    lightSource.extensionOf(TileManager::class)?.let { tileManager ->
+    lightSource.extensionOf(TileService::class)?.let { tileManager ->
         tileManager.addListener(object : ITileManagerListener {
 
 
@@ -27,7 +27,7 @@ fun main(args: Array<String>) {
 
                 for (index in 0 until tile.chain.size) {
                     TileSetTileState64Command.create(
-                            tileManager = tileManager,
+                            tileService = tileManager,
                             light = tile.light,
                             tileIndex = index,
                             colors = colors
@@ -40,7 +40,7 @@ fun main(args: Array<String>) {
                 val colors = List(64) { HSBK((degree * (Short.MAX_VALUE.toInt() * 2) / 360).toShort(), (Short.MAX_VALUE.toInt() * 2).toShort(), Short.MAX_VALUE, 0) }
 
                 TileSetTileState64Command.create(
-                        tileManager = tileManager,
+                        tileService = tileManager,
                         light = tile.light,
                         tileIndex = device.index,
                         colors = colors
@@ -50,7 +50,7 @@ fun main(args: Array<String>) {
         })
     }
 
-    lightSource.extensionOf(LocationGroupManager::class)?.let { locationGroupManager ->
+    lightSource.extensionOf(LocationGroupService::class)?.let { locationGroupManager ->
         locationGroupManager.addListener(object : IGroupLocationChangeListener {
             override fun locationAdded(newLocation: Location) {
                 println("location added ${newLocation.name}")

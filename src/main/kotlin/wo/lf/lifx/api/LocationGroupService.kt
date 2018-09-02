@@ -32,7 +32,7 @@ interface IGroupLocationChangeListener {
 
 }
 
-class LocationGroupManager(
+class LocationGroupService(
         private val wrappedChangeDispatcher: ILightsChangeDispatcher
 ) : ILightServiceExtension<LifxMessage<LifxMessagePayload>>, ILightsChangeDispatcher {
 
@@ -151,7 +151,7 @@ class LocationGroupManager(
 
     companion object : ILightServiceExtensionFactory<LifxMessage<LifxMessagePayload>> {
         override fun create(changeDispatcher: ILightsChangeDispatcher): ILightServiceExtension<LifxMessage<LifxMessagePayload>> {
-            return LocationGroupManager(changeDispatcher)
+            return LocationGroupService(changeDispatcher)
         }
     }
 }

@@ -45,7 +45,7 @@ data class TileLight(
     var chain: List<TileDevice> = listOf()
 }
 
-class TileManager(
+class TileService(
         private val wrappedChangeDispatcher: ILightsChangeDispatcher
 ) : ILightServiceExtension<LifxMessage<LifxMessagePayload>>, ILightsChangeDispatcher {
 
@@ -193,7 +193,7 @@ class TileManager(
 
     companion object : ILightServiceExtensionFactory<LifxMessage<LifxMessagePayload>> {
         override fun create(changeDispatcher: ILightsChangeDispatcher): ILightServiceExtension<LifxMessage<LifxMessagePayload>> {
-            return TileManager(changeDispatcher)
+            return TileService(changeDispatcher)
         }
 
     }

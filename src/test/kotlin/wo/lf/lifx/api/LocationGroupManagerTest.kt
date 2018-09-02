@@ -25,12 +25,12 @@ class LocationGroupManagerTest : Spek({
     }
 
     context("a location and group manager") {
-        lateinit var manager: LocationGroupManager
+        lateinit var manager: LocationGroupService
         lateinit var groupLocationChangeListener: TestGroupLocationChangeListener
 
         beforeEachTest {
             groupLocationChangeListener = TestGroupLocationChangeListener()
-            manager = LocationGroupManager(TestLightsChangeDispatcher()).apply {
+            manager = LocationGroupService(TestLightsChangeDispatcher()).apply {
                 addListener(groupLocationChangeListener)
             }
         }

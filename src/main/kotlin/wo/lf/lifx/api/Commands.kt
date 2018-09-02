@@ -246,11 +246,11 @@ object TileGetTileState64Command {
 }
 
 object TileSetTileState64Command {
-    fun create(tileManager: TileManager, light: Light, tileIndex: Int = 0, endIndex: Int = tileIndex + 1, x: Int = 0, y: Int = 0, width: Int = 8, duration: Int = 1000, colors: List<HSBK>, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateMultiZone> {
+    fun create(tileService: TileService, light: Light, tileIndex: Int = 0, endIndex: Int = tileIndex + 1, x: Int = 0, y: Int = 0, width: Int = 8, duration: Int = 1000, colors: List<HSBK>, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateMultiZone> {
         return light.send(SetTileState64(tileIndex.toByte(), endIndex.toByte(), 0, x.toByte(), y.toByte(), width.toByte(), duration, colors.toTypedArray()), ackRequired, responseRequired) {
-            tileManager.tiles.firstOrNull { it.light === light }?.let { tile ->
+            tileService.tiles.firstOrNull { it.light === light }?.let { tile ->
                 val device = tile.chain[tileIndex]
-                tileManager.updateTile(tile, device, x, y, width, colors.toTypedArray())
+                tileService.updateTile(tile, device, x, y, width, colors.toTypedArray())
             }
         }
     }
