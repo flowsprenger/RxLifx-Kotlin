@@ -77,7 +77,7 @@ class LightService(
         Pair(extension, extensions + extension)
     }
 
-    private val changeDispatcher = dispatcherAndExtensions.first
+    val changeDispatcher = dispatcherAndExtensions.first
     private val extensions = dispatcherAndExtensions.second
 
     private val transport = transportFactory.create(0, LifxMessageParserImpl())
