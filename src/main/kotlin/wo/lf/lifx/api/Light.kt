@@ -272,12 +272,21 @@ enum class LightChangeSource {
 
 internal inline fun Light.update(source: LightChangeSource, property: LightProperty, apply: () -> Unit) {
     val now = Date().time
-    if (source == LightChangeSource.Client || updatedAtByProperty.getOrDefault(property, 0) + CLIENT_CHANGE_TIMEOUT < now) {
+    if (source == LightChangeSource.Client || getOrDefault(updatedAtByProperty, property, 0) + CLIENT_CHANGE_TIMEOUT < now) {
         if (source == LightChangeSource.Client) {
             updatedAtByProperty[property] = now
         }
         apply()
     }
+}
+
+private fun getOrDefault(map: MutableMap<LightProperty, Long>, key: LightProperty, default: Long): Long
+{
+    var value = map[key]
+    if (value == null) {
+        value = default
+    }
+    return value
 }
 
 internal inline fun Light.updateZone(source: LightChangeSource, property: LightProperty, range: IntRange, apply: () -> Unit) {
