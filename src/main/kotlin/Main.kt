@@ -15,7 +15,7 @@ fun main(args: Array<String>) {
     }, extensionFactories = listOf(TileService, LocationGroupService)).apply { start() }
 
     lightSource.extensionOf(TileService::class)?.let { tileManager ->
-        tileManager.addListener(object : ITileManagerListener {
+        tileManager.addListener(object : ITileServiceListener {
 
 
             override fun tileAdded(tile: TileLight) {

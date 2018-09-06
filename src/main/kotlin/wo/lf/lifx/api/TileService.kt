@@ -33,7 +33,7 @@ class TileDevice(
         val colors: Array<HSBK>
 )
 
-interface ITileManagerListener {
+interface ITileServiceListener {
     fun tileAdded(tile: TileLight)
     fun chainUpdated(tile: TileLight)
     fun deviceUpdated(tile: TileLight, device: TileDevice)
@@ -49,7 +49,7 @@ class TileService(
         private val wrappedChangeDispatcher: ILightsChangeDispatcher
 ) : ILightServiceExtension<LifxMessage<LifxMessagePayload>>, ILightsChangeDispatcher {
 
-    private var listeners: Set<ITileManagerListener> = setOf()
+    private var listeners: Set<ITileServiceListener> = setOf()
 
     private val disposables = CompositeDisposable()
 
@@ -60,8 +60,13 @@ class TileService(
 
     override fun start(source: ILightSource<LifxMessage<LifxMessagePayload>>) {
         disposables.add(source.tick.subscribe {
-            tilesById.forEach { (id, tile) ->
+            tilesById.forEach { (_, tile) ->
                 TileGetTileState64Command.create(tile.light).fireAndForget()
+            }
+            if (it.rem(12L) == 0L) {
+                tilesById.forEach { (_, tile) ->
+                    TileGetDeviceChainCommand.create(tile.light).fireAndForget()
+                }
             }
         })
 
@@ -171,7 +176,6 @@ class TileService(
             tilesById[light.id] = tile
             TileGetDeviceChainCommand.create(light).fireAndForget()
             TileGetTileState64Command.create(light).fireAndForget()
-            // dispatch tile added
             listeners.forEach { it.tileAdded(tile) }
         }
     }
@@ -183,11 +187,11 @@ class TileService(
         wrappedChangeDispatcher.onLightChange(light, property, oldValue, newValue)
     }
 
-    fun addListener(listener: ITileManagerListener) {
+    fun addListener(listener: ITileServiceListener) {
         listeners = listeners.plus(listener)
     }
 
-    fun removeListener(listener: ITileManagerListener) {
+    fun removeListener(listener: ITileServiceListener) {
         listeners = listeners.minus(listener)
     }
 
