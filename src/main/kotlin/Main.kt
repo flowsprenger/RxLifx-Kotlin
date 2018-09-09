@@ -40,7 +40,6 @@ fun main(args: Array<String>) {
                 val colors = List(64) { HSBK((degree * (Short.MAX_VALUE.toInt() * 2) / 360).toShort(), (Short.MAX_VALUE.toInt() * 2).toShort(), Short.MAX_VALUE, 0) }
 
                 TileSetTileState64Command.create(
-                        tileService = tileManager,
                         light = tile.light,
                         tileIndex = device.index,
                         colors = colors

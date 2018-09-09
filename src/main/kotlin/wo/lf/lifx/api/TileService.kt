@@ -58,6 +58,10 @@ class TileService(
     val tiles: List<TileLight>
         get() = tilesById.values.toList()
 
+    fun tileOf(light: Light): TileLight? {
+        return tilesById.values.firstOrNull { it.light == light }
+    }
+
     override fun start(source: ILightSource<LifxMessage<LifxMessagePayload>>) {
         disposables.add(source.tick.subscribe {
             tilesById.forEach { (_, tile) ->
@@ -124,7 +128,6 @@ class TileService(
 
                         if (tileChanged) {
                             tile.chain = devices
-                            // dispatch change
                             listeners.forEach { it.chainUpdated(tile) }
                         }
                     }
@@ -143,7 +146,7 @@ class TileService(
     internal fun updateTile(tile: TileLight, device: TileDevice, setX: Int, setY: Int, width: Int, colors: Array<HSBK>) {
         var colorsChanged = false
         for (x in setX until Math.min(8, setX + width)) {
-            for (y in setY until Math.min(8, setY + 64 / width)) {
+            for (y in setY until Math.min(8, setY + colors.size / width)) {
                 val existingColor = device.colors[y * 8 + x]
                 val newColor = colors[(y - setY) * width + x - setX]
                 if (existingColor != newColor) {

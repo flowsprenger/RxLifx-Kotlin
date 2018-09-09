@@ -249,14 +249,16 @@ object TileSetTileState64Command {
     fun create(tileService: TileService, light: Light, tileIndex: Int = 0, length: Int = tileIndex + 1, x: Int = 0, y: Int = 0, width: Int = 8, duration: Int = 1000, colors: List<HSBK>, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateTileState64> {
         return light.send(SetTileState64(tileIndex.toByte(), length.toByte(), 0, x.toByte(), y.toByte(), width.toByte(), duration, colors.toTypedArray()), ackRequired, responseRequired) {
             tileService.tiles.firstOrNull { it.light === light }?.let { tile ->
-                val device = tile.chain[tileIndex]
-                tileService.updateTile(tile, device, x, y, width, colors.toTypedArray())
+                for (index in tileIndex until Math.min(tileIndex + length, tile.chain.size)) {
+                    val device = tile.chain[index]
+                    tileService.updateTile(tile, device, x, y, width, colors.toTypedArray())
+                }
             }
         }
     }
 
-    fun create(light: Light, tileIndex: Int = 0, endIndex: Int = tileIndex + 1, x: Int = 0, y: Int = 0, width: Int = 8, duration: Int = 1000, colors: List<HSBK>, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateTileState64> {
-        return light.send(SetTileState64(tileIndex.toByte(), endIndex.toByte(), 0, x.toByte(), y.toByte(), width.toByte(), duration, colors.toTypedArray()), ackRequired, responseRequired)
+    fun create(light: Light, tileIndex: Int = 0, length: Int = tileIndex + 1, x: Int = 0, y: Int = 0, width: Int = 8, duration: Int = 1000, colors: List<HSBK>, ackRequired: Boolean = false, responseRequired: Boolean = false): Maybe<StateTileState64> {
+        return light.send(SetTileState64(tileIndex.toByte(), length.toByte(), 0, x.toByte(), y.toByte(), width.toByte(), duration, colors.toTypedArray()), ackRequired, responseRequired)
     }
 }
 
