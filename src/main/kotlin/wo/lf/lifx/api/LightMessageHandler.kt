@@ -73,7 +73,7 @@ object LightMessageHandler : ILightMessageHandler {
                 is StateMultiZone -> {
                     val index = payload.index.toInt()
                     val count = payload.count.toInt()
-                    updateZone(LightChangeSource.Device, LightProperty.Zones, index .. min(count, payload.index + 8)) {
+                    updateZone(LightChangeSource.Device, LightProperty.Zones, index .. Math.min(count, payload.index + 8)) {
                         val firstAfter = Math.min(index + 8, count)
                         if (zones.count != count || zones.count < firstAfter || zones.colors.subList(index, firstAfter) != payload.color.toList().subList(0, Math.min(8, count - index))) {
                             zones = Zones(count = count, colors = List(index) {
