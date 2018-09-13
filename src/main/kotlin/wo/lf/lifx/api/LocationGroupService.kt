@@ -170,4 +170,10 @@ fun Array<Byte>.getGuidFromByteArray(): String {
     return buffer.toString()
 }
 
+fun Light.group(): Group? {
+    return source.extensionOf(LocationGroupService::class)?.getLocationGroup(this)?.second
+}
 
+fun Light.location(): Location? {
+    return source.extensionOf(LocationGroupService::class)?.getLocationGroup(this)?.first
+}

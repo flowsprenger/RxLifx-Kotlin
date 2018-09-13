@@ -40,6 +40,7 @@ interface ITileServiceListener {
 }
 
 data class TileLight(
+        val tileService: TileService,
         val light: Light
 ) {
     var chain: List<TileDevice> = listOf()
@@ -175,7 +176,7 @@ class TileService(
 
     private fun trackTile(light: Light) {
         if (!tilesById.containsKey(light.id)) {
-            val tile = TileLight(light)
+            val tile = TileLight(this, light)
             tilesById[light.id] = tile
             TileGetDeviceChainCommand.create(light).fireAndForget()
             TileGetTileState64Command.create(light).fireAndForget()
@@ -204,4 +205,8 @@ class TileService(
         }
 
     }
+}
+
+fun Light.tile(): TileLight? {
+    return source.extensionOf(TileService::class)?.tileOf(this)
 }

@@ -52,6 +52,7 @@ interface ILightSource<T> {
     val messages: Flowable<SourcedLifxMessage<T>>
     val ioScheduler: Scheduler
     val observeScheduler: Scheduler
+    fun <T : Any> extensionOf(type: KClass<T>): T?
 }
 
 interface ILightServiceExtensionFactory<T> {
@@ -115,7 +116,7 @@ class LightService(
         disposables.clear()
     }
 
-    fun <T : Any> extensionOf(type: KClass<T>): T? {
+    override fun <T : Any> extensionOf(type: KClass<T>): T? {
         return extensions.firstOrNull { type.isInstance(it) } as? T
     }
 
