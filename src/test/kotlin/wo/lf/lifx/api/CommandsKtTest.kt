@@ -14,6 +14,7 @@ import wo.lf.lifx.net.SourcedLifxMessage
 import wo.lf.lifx.net.TargetedLifxMessage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import kotlin.reflect.KClass
 
 class CommandsKtTest : Spek({
     context("a light") {
@@ -25,7 +26,7 @@ class CommandsKtTest : Spek({
 
         beforeEachTest {
             scheduler = TestScheduler()
-            lightSource = TestLightSource(scheduler)
+            lightSource = TestLightSource(scheduler, scheduler)
             light = Light(15, lightSource, TestLightChangeDispatcher())
             sendInvocationCount = 0
 
@@ -62,7 +63,8 @@ open class TestLightChangeDispatcher : ILightChangeDispatcher {
     }
 }
 
-class TestLightSource(override val ioScheduler: Scheduler) : ILightSource<LifxMessage<LifxMessagePayload>> {
+class TestLightSource(override val ioScheduler: Scheduler, override val observeScheduler: Scheduler) : ILightSource<LifxMessage<LifxMessagePayload>> {
+
     var sendImpl: ((TargetedLifxMessage<LifxMessage<LifxMessagePayload>>) -> Boolean)? = null
     override fun send(message: TargetedLifxMessage<LifxMessage<LifxMessagePayload>>): Boolean {
         return sendImpl?.invoke(message) ?: true
@@ -75,4 +77,7 @@ class TestLightSource(override val ioScheduler: Scheduler) : ILightSource<LifxMe
 
     override val messages: Flowable<SourcedLifxMessage<LifxMessage<LifxMessagePayload>>> = messagePublisher
 
+    override fun <T : Any> extensionOf(type: KClass<T>): T? {
+        return null
+    }
 }

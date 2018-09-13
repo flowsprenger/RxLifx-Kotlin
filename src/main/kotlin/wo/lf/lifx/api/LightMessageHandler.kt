@@ -102,6 +102,7 @@ object LightMessageHandler : ILightMessageHandler {
                         label = String(payload.label).trimNullBytes()
                     }
                 }
+                is StateTileState64, is StateDeviceChain,
                 is StateService, is StateWifiInfo, is StateHostInfo, is EchoResponse -> {
                     // NOOP
                 }

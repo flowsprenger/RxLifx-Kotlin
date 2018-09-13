@@ -1,7 +1,7 @@
 
 
 buildscript {
-    ext.kotlin_version = '1.2.60'
+    ext.kotlin_version = '1.2.61'
 
     repositories {
         mavenCentral()
@@ -21,7 +21,7 @@ plugins {
 
 apply plugin: 'org.junit.platform.gradle.plugin'
 
-version "0.0.11"
+version "0.1.0-alpha"
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
@@ -43,6 +43,8 @@ dependencies {
     testCompile('org.junit.jupiter:junit-jupiter-api:5.2.0')
     testRuntime('org.junit.jupiter:junit-jupiter-engine:5.2.0')
     testRuntime('org.junit.platform:junit-platform-runner:1.0.0')
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 }
 
 jar {

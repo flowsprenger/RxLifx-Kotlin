@@ -2425,6 +2425,564 @@ class StateMultiZone : LifxMessagePayload {
 
 }
 
+class Tile : LifxMessageSerializable {
+
+    override val _size = 55
+
+
+    var reserved0: Short
+    var reserved1: Short
+    var reserved2: Short
+    var reserved3: Short
+    var user_x: Float
+    var user_y: Float
+    var width: Byte
+    var height: Byte
+    var reserved4: Byte
+    var device_version_vendor: Int
+    var device_version_product: Int
+    var device_version_version: Int
+    var firmware_build: Long
+    var reserved5: Long
+    var firmware_version: Int
+    var reserved6: Int
+
+    override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
+        buffer.putShort(reserved0)
+        buffer.putShort(reserved1)
+        buffer.putShort(reserved2)
+        buffer.putShort(reserved3)
+        buffer.putFloat(user_x)
+        buffer.putFloat(user_y)
+        buffer.put(width)
+        buffer.put(height)
+        buffer.put(reserved4)
+        buffer.putInt(device_version_vendor)
+        buffer.putInt(device_version_product)
+        buffer.putInt(device_version_version)
+        buffer.putLong(firmware_build)
+        buffer.putLong(reserved5)
+        buffer.putInt(firmware_version)
+        buffer.putInt(reserved6)
+        return buffer
+    }
+
+    constructor(reserved0: Short, reserved1: Short, reserved2: Short, reserved3: Short, user_x: Float, user_y: Float, width: Byte, height: Byte, reserved4: Byte, device_version_vendor: Int, device_version_product: Int, device_version_version: Int, firmware_build: Long, reserved5: Long, firmware_version: Int, reserved6: Int) {
+        this.reserved0 = reserved0
+        this.reserved1 = reserved1
+        this.reserved2 = reserved2
+        this.reserved3 = reserved3
+        this.user_x = user_x
+        this.user_y = user_y
+        this.width = width
+        this.height = height
+        this.reserved4 = reserved4
+        this.device_version_vendor = device_version_vendor
+        this.device_version_product = device_version_product
+        this.device_version_version = device_version_version
+        this.firmware_build = firmware_build
+        this.reserved5 = reserved5
+        this.firmware_version = firmware_version
+        this.reserved6 = reserved6
+    }
+
+    constructor(buffer: ByteBuffer) {
+        reserved0 = buffer.getShort()
+        reserved1 = buffer.getShort()
+        reserved2 = buffer.getShort()
+        reserved3 = buffer.getShort()
+        user_x = buffer.getFloat()
+        user_y = buffer.getFloat()
+        width = buffer.get()
+        height = buffer.get()
+        reserved4 = buffer.get()
+        device_version_vendor = buffer.getInt()
+        device_version_product = buffer.getInt()
+        device_version_version = buffer.getInt()
+        firmware_build = buffer.getLong()
+        reserved5 = buffer.getLong()
+        firmware_version = buffer.getInt()
+        reserved6 = buffer.getInt()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other is Tile) {
+            return true
+
+                    && reserved0 == other.reserved0
+
+
+                    && reserved1 == other.reserved1
+
+
+                    && reserved2 == other.reserved2
+
+
+                    && reserved3 == other.reserved3
+
+
+                    && user_x == other.user_x
+
+
+                    && user_y == other.user_y
+
+
+                    && width == other.width
+
+
+                    && height == other.height
+
+
+                    && reserved4 == other.reserved4
+
+
+                    && device_version_vendor == other.device_version_vendor
+
+
+                    && device_version_product == other.device_version_product
+
+
+                    && device_version_version == other.device_version_version
+
+
+                    && firmware_build == other.firmware_build
+
+
+                    && reserved5 == other.reserved5
+
+
+                    && firmware_version == other.firmware_version
+
+
+                    && reserved6 == other.reserved6
+
+        }
+        return false
+    }
+
+    override fun toString(): String {
+        return "Tile : reserved0:$reserved0, reserved1:$reserved1, reserved2:$reserved2, reserved3:$reserved3, user_x:$user_x, user_y:$user_y, width:$width, height:$height, reserved4:$reserved4, device_version_vendor:$device_version_vendor, device_version_product:$device_version_product, device_version_version:$device_version_version, firmware_build:$firmware_build, reserved5:$reserved5, firmware_version:$firmware_version, reserved6:$reserved6, "
+    }
+
+
+}
+
+class GetDeviceChain : LifxMessagePayload {
+
+    override val _size = 0
+
+    override val _type = 701
+
+
+    override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
+        return buffer
+    }
+
+    constructor() {
+    }
+
+    constructor(buffer: ByteBuffer) {
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other is GetDeviceChain) {
+            return true
+        }
+        return false
+    }
+
+    override fun toString(): String {
+        return "GetDeviceChain : "
+    }
+
+
+    companion object : LifxMessageDeserialzable {
+        override fun parse(buffer: ByteBuffer): LifxMessagePayload {
+            return GetDeviceChain(buffer)
+        }
+    }
+
+}
+
+class StateDeviceChain : LifxMessagePayload {
+
+    override val _size = 882
+
+    override val _type = 702
+
+
+    var start_index: Byte
+    var tile_devices: Array<Tile>
+    var total_count: Byte
+
+    override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
+        buffer.put(start_index)
+        assert(tile_devices.size == 16); tile_devices.forEach { it.addToByteBuffer(buffer) }
+        buffer.put(total_count)
+        return buffer
+    }
+
+    constructor(start_index: Byte, tile_devices: Array<Tile>, total_count: Byte) {
+        this.start_index = start_index
+        this.tile_devices = tile_devices
+        this.total_count = total_count
+    }
+
+    constructor(buffer: ByteBuffer) {
+        start_index = buffer.get()
+        tile_devices = (0 until 16).map { Tile(buffer) }.toTypedArray()
+        total_count = buffer.get()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other is StateDeviceChain) {
+            return true
+
+                    && start_index == other.start_index
+
+
+                    && tile_devices == other.tile_devices
+
+
+                    && total_count == other.total_count
+
+        }
+        return false
+    }
+
+    override fun toString(): String {
+        return "StateDeviceChain : start_index:$start_index, tile_devices:$tile_devices, total_count:$total_count, "
+    }
+
+
+    companion object : LifxMessageDeserialzable {
+        override fun parse(buffer: ByteBuffer): LifxMessagePayload {
+            return StateDeviceChain(buffer)
+        }
+    }
+
+}
+
+class SetUserPosition : LifxMessagePayload {
+
+    override val _size = 11
+
+    override val _type = 703
+
+
+    var tile_index: Byte
+    var reserved: Short
+    var user_x: Float
+    var user_y: Float
+
+    override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
+        buffer.put(tile_index)
+        buffer.putShort(reserved)
+        buffer.putFloat(user_x)
+        buffer.putFloat(user_y)
+        return buffer
+    }
+
+    constructor(tile_index: Byte, reserved: Short, user_x: Float, user_y: Float) {
+        this.tile_index = tile_index
+        this.reserved = reserved
+        this.user_x = user_x
+        this.user_y = user_y
+    }
+
+    constructor(buffer: ByteBuffer) {
+        tile_index = buffer.get()
+        reserved = buffer.getShort()
+        user_x = buffer.getFloat()
+        user_y = buffer.getFloat()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other is SetUserPosition) {
+            return true
+
+                    && tile_index == other.tile_index
+
+
+                    && reserved == other.reserved
+
+
+                    && user_x == other.user_x
+
+
+                    && user_y == other.user_y
+
+        }
+        return false
+    }
+
+    override fun toString(): String {
+        return "SetUserPosition : tile_index:$tile_index, reserved:$reserved, user_x:$user_x, user_y:$user_y, "
+    }
+
+
+    companion object : LifxMessageDeserialzable {
+        override fun parse(buffer: ByteBuffer): LifxMessagePayload {
+            return SetUserPosition(buffer)
+        }
+    }
+
+}
+
+class GetTileState64 : LifxMessagePayload {
+
+    override val _size = 6
+
+    override val _type = 707
+
+
+    var tile_index: Byte
+    var length: Byte
+    var reserved: Byte
+    var x: Byte
+    var y: Byte
+    var width: Byte
+
+    override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
+        buffer.put(tile_index)
+        buffer.put(length)
+        buffer.put(reserved)
+        buffer.put(x)
+        buffer.put(y)
+        buffer.put(width)
+        return buffer
+    }
+
+    constructor(tile_index: Byte, length: Byte, reserved: Byte, x: Byte, y: Byte, width: Byte) {
+        this.tile_index = tile_index
+        this.length = length
+        this.reserved = reserved
+        this.x = x
+        this.y = y
+        this.width = width
+    }
+
+    constructor(buffer: ByteBuffer) {
+        tile_index = buffer.get()
+        length = buffer.get()
+        reserved = buffer.get()
+        x = buffer.get()
+        y = buffer.get()
+        width = buffer.get()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other is GetTileState64) {
+            return true
+
+                    && tile_index == other.tile_index
+
+
+                    && length == other.length
+
+
+                    && reserved == other.reserved
+
+
+                    && x == other.x
+
+
+                    && y == other.y
+
+
+                    && width == other.width
+
+        }
+        return false
+    }
+
+    override fun toString(): String {
+        return "GetTileState64 : tile_index:$tile_index, length:$length, reserved:$reserved, x:$x, y:$y, width:$width, "
+    }
+
+
+    companion object : LifxMessageDeserialzable {
+        override fun parse(buffer: ByteBuffer): LifxMessagePayload {
+            return GetTileState64(buffer)
+        }
+    }
+
+}
+
+class StateTileState64 : LifxMessagePayload {
+
+    override val _size = 517
+
+    override val _type = 711
+
+
+    var tile_index: Byte
+    var reserved: Byte
+    var x: Byte
+    var y: Byte
+    var width: Byte
+    var colors: Array<HSBK>
+
+    override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
+        buffer.put(tile_index)
+        buffer.put(reserved)
+        buffer.put(x)
+        buffer.put(y)
+        buffer.put(width)
+        assert(colors.size == 64); colors.forEach { it.addToByteBuffer(buffer) }
+        return buffer
+    }
+
+    constructor(tile_index: Byte, reserved: Byte, x: Byte, y: Byte, width: Byte, colors: Array<HSBK>) {
+        this.tile_index = tile_index
+        this.reserved = reserved
+        this.x = x
+        this.y = y
+        this.width = width
+        this.colors = colors
+    }
+
+    constructor(buffer: ByteBuffer) {
+        tile_index = buffer.get()
+        reserved = buffer.get()
+        x = buffer.get()
+        y = buffer.get()
+        width = buffer.get()
+        colors = (0 until 64).map { HSBK(buffer) }.toTypedArray()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other is StateTileState64) {
+            return true
+
+                    && tile_index == other.tile_index
+
+
+                    && reserved == other.reserved
+
+
+                    && x == other.x
+
+
+                    && y == other.y
+
+
+                    && width == other.width
+
+
+                    && colors == other.colors
+
+        }
+        return false
+    }
+
+    override fun toString(): String {
+        return "StateTileState64 : tile_index:$tile_index, reserved:$reserved, x:$x, y:$y, width:$width, colors:$colors, "
+    }
+
+
+    companion object : LifxMessageDeserialzable {
+        override fun parse(buffer: ByteBuffer): LifxMessagePayload {
+            return StateTileState64(buffer)
+        }
+    }
+
+}
+
+class SetTileState64 : LifxMessagePayload {
+
+    override val _size = 522
+
+    override val _type = 715
+
+
+    var tile_index: Byte
+    var length: Byte
+    var reserved: Byte
+    var x: Byte
+    var y: Byte
+    var width: Byte
+    var duration: Int
+    var colors: Array<HSBK>
+
+    override fun addToByteBuffer(buffer: ByteBuffer): ByteBuffer {
+        buffer.put(tile_index)
+        buffer.put(length)
+        buffer.put(reserved)
+        buffer.put(x)
+        buffer.put(y)
+        buffer.put(width)
+        buffer.putInt(duration)
+        assert(colors.size == 64); colors.forEach { it.addToByteBuffer(buffer) }
+        return buffer
+    }
+
+    constructor(tile_index: Byte, length: Byte, reserved: Byte, x: Byte, y: Byte, width: Byte, duration: Int, colors: Array<HSBK>) {
+        this.tile_index = tile_index
+        this.length = length
+        this.reserved = reserved
+        this.x = x
+        this.y = y
+        this.width = width
+        this.duration = duration
+        this.colors = colors
+    }
+
+    constructor(buffer: ByteBuffer) {
+        tile_index = buffer.get()
+        length = buffer.get()
+        reserved = buffer.get()
+        x = buffer.get()
+        y = buffer.get()
+        width = buffer.get()
+        duration = buffer.getInt()
+        colors = (0 until 64).map { HSBK(buffer) }.toTypedArray()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other is SetTileState64) {
+            return true
+
+                    && tile_index == other.tile_index
+
+
+                    && length == other.length
+
+
+                    && reserved == other.reserved
+
+
+                    && x == other.x
+
+
+                    && y == other.y
+
+
+                    && width == other.width
+
+
+                    && duration == other.duration
+
+
+                    && colors == other.colors
+
+        }
+        return false
+    }
+
+    override fun toString(): String {
+        return "SetTileState64 : tile_index:$tile_index, length:$length, reserved:$reserved, x:$x, y:$y, width:$width, duration:$duration, colors:$colors, "
+    }
+
+
+    companion object : LifxMessageDeserialzable {
+        override fun parse(buffer: ByteBuffer): LifxMessagePayload {
+            return SetTileState64(buffer)
+        }
+    }
+
+}
+
 enum class Service(val value: Byte) {
     UDP(1.toByte()),
 
@@ -2461,7 +3019,7 @@ enum class WaveformType(val value: Byte) {
     TRIANGLE(3.toByte()),
     PULSE(4.toByte()),
 
-    UNKNOWN(0);
+    UNKNOWN(6);
 
     companion object {
         private val ordinals = enumValues<WaveformType>().associateBy { it.value }
@@ -2477,7 +3035,7 @@ enum class ApplicationRequest(val value: Byte) {
     APPLY(1.toByte()),
     APPLY_ONLY(2.toByte()),
 
-    UNKNOWN(0);
+    UNKNOWN(3);
 
     companion object {
         private val ordinals = enumValues<ApplicationRequest>().associateBy { it.value }
@@ -2533,6 +3091,12 @@ enum class MessageType(val value: Short) {
     GetColorZones(502),
     StateZone(503),
     StateMultiZone(506),
+    GetDeviceChain(701),
+    StateDeviceChain(702),
+    SetUserPosition(703),
+    GetTileState64(707),
+    StateTileState64(711),
+    SetTileState64(715),
 }
 
 val payloadFactories = hashMapOf<Int, LifxMessageDeserialzable>(
@@ -2579,6 +3143,12 @@ val payloadFactories = hashMapOf<Int, LifxMessageDeserialzable>(
         501 to SetColorZones,
         502 to GetColorZones,
         503 to StateZone,
-        506 to StateMultiZone
+        506 to StateMultiZone,
+        701 to GetDeviceChain,
+        702 to StateDeviceChain,
+        703 to SetUserPosition,
+        707 to GetTileState64,
+        711 to StateTileState64,
+        715 to SetTileState64
 )
 
