@@ -38,7 +38,7 @@ using jCenter()
 
 Implement ILightChangeDispatcher to track lights being detected and properties of the lights changing
 ```kotlin
-val changeListener = object : ILightChangeDispatcher {
+val changeListener = object : ILightsChangeDispatcher {
         override fun onLightAdded(light: Light) {
             println("light added : ${light.id}")
         }
