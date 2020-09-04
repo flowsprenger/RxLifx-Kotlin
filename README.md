@@ -22,14 +22,14 @@ Download the latest JAR or grab via Maven:
 <dependency>
   <groupId>wo.lf</groupId>
   <artifactId>rx-lifx</artifactId>
-  <version>0.0.11</version>
+  <version>0.1.1-alpha</version>
 </dependency>
 ```
 
 or Gradle:
 
 ```
-implementation 'wo.lf:rx-lifx:0.0.11'
+implementation 'wo.lf:rx-lifx:0.1.1-alpha'
 ```
 
 using jCenter()
