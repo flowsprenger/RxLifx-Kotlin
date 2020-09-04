@@ -80,6 +80,8 @@ class UdpTransport<T>(val port: Int, private val parser: LifxMessageParser<T>, p
                 }
             } catch (e: NotYetConnectedException) {
                 channel.close()
+            } catch (e: IOException) {
+                channel.close()
             }
         }
 
