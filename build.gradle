@@ -81,6 +81,7 @@ bintray {
             vcsTag = "$project.version"
             attributes = [:]
         }
+        publish = true
     }
     publications = ['MyPublication']
 }
